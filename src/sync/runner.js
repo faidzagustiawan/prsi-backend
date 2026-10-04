@@ -3,8 +3,7 @@
 // Satu putaran worker: tarik dari Track, proses pembayaran (Alur 2), kirim
 // outbox. Dijaga advisory lock Postgres supaya dua putaran (dua proses worker,
 // atau worker + tombol "Sinkron sekarang") tidak pernah berjalan bersamaan.
-import { client as pgClient } from '../config/database.js';
-import { db } from '../config/database.js';
+import { db, sessionClient } from '../config/database.js';
 import { env } from '../config/env.js';
 import { syncLog } from '../shared/schemas/track.schema.js';
 import { createTrackClient, TrackError } from './track-client.js';
@@ -18,7 +17,8 @@ const LOCK_KEY = 74_210_301; // angka tetap untuk pg_try_advisory_lock milik wor
 export const WORKER_ACTOR = { userId: null, ip: null };
 
 async function withLock(fn) {
-  const conn = await pgClient.reserve();
+  // Lock dipegang koneksi sesi; pekerjaannya sendiri tetap lewat pool biasa
+  const conn = await sessionClient.reserve();
   try {
     const [{ locked }] = await conn`SELECT pg_try_advisory_lock(${LOCK_KEY}) AS locked`;
     if (!locked) return { dilewati: true, alasan: 'Putaran lain sedang berjalan.' };
