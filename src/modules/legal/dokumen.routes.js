@@ -6,6 +6,7 @@ import { uuidSchema, isoDate, nominal, idParams, optionalText } from '../../shar
 import { STATUS_DOKUMEN, tipeDariLabel } from '../../shared/constants.js';
 import { fieldSchema } from './pasal.routes.js';
 import * as service from './dokumen.service.js';
+import * as adendum from './adendum.service.js';
 
 const tags = ['Legal - Dokumen SPPR'];
 const ok = (data, message = 'Success') => ({ success: true, message, data });
@@ -146,6 +147,31 @@ export default async function dokumenRoutes(fastify) {
         'Membentuk kartu piutang, jadwal angsuran (antre dikirim ke Track), dan jurnal booking fee ke uang muka.',
     },
   }, async (request) => ok(await service.finalisasi(actorOf(request), request.params.id), 'Dokumen difinalkan'));
+
+  fastify.post('/:id/adendum', {
+    preHandler: [...guard, validate({
+      params: idParams,
+      body: z.object({
+        alasan: z.string().trim().min(1, 'Alasan adendum wajib diisi').max(1000),
+        // Hanya untuk pindah kavling (kavling di PR Track sudah diganti)
+        biayaPindah: nominal.default(0),
+        tanggal: isoDate.optional(),
+      }),
+    })],
+    schema: {
+      tags,
+      description: 'Buat adendum draft dari SPPR yang berlaku: data, pasal, dan jadwal aktif disalin; kavling ikut PR Track terkini. ' +
+        'Ubah dengan endpoint dokumen biasa, lalu POST /:adendumId/finalisasi.',
+    },
+  }, async (request, reply) => {
+    const id = await adendum.buat(actorOf(request), request.params.id, request.body);
+    return reply.code(201).send(ok(await service.get(id), 'Adendum dibuat'));
+  });
+
+  fastify.get('/:id/riwayat', {
+    preHandler: [...guard, validate({ params: idParams })],
+    schema: { tags, description: 'Rantai SPPR dan adendumnya; berlaku = yang dipakai piutang sekarang' },
+  }, async (request) => ok(await adendum.riwayat(request.params.id)));
 
   fastify.post('/:id/tandatangani', {
     preHandler: [...guard, validate({ params: idParams })], schema: { tags, description: 'Tandai dokumen final sudah ditandatangani' },

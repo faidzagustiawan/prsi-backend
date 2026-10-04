@@ -290,6 +290,30 @@ Perbedaan dari store:
 
 Finalisasi menolak bila: tanpa `assignmentId`, nama pembeli kosong, harga awal 0, total jadwal ≠ uang muka, atau penjualan itu sudah punya SPPR final. Bila lolos, dalam satu transaksi: kartu piutang dibuat, jadwal masuk `jadwal_angsuran` dan antre dikirim ke PR Track, dan booking fee yang sudah masuk dipindah dari Titipan booking fee ke Uang muka penjualan.
 
+## Legal: adendum SPPR
+
+Perubahan harga, jadwal, atau kavling setelah SPPR final (pengganti catatan "Perubahan nilai uang dan jadwal memerlukan fitur Adendum" di `LegalEditorPage`).
+
+| Method | Path | Body |
+| --- | --- | --- |
+| POST | `/dokumen/:id/adendum` | `{ alasan, biayaPindah?, tanggal? }`. `:id` = dokumen yang sedang `berlaku` |
+| GET | `/dokumen/:id/riwayat` | Rantai SPPR + adendum: `[{ id, noDokumen, jenis: 'sppr'\|'adendum', status, berlaku, alasan, pindahKavling, nilaiSppr }]` |
+
+Alur di frontend:
+1. Pada dokumen dengan `berlaku: true`, tombol "Buat adendum" memanggil `POST /dokumen/:id/adendum`. Hasilnya dokumen draft baru (`jenisDokumen: 'ADENDUM'`, `indukId`, nomor `<SPPR asal>/ADD-01`) yang menyalin data, pasal, dan jadwal yang berlaku.
+2. Ubah adendum dengan endpoint dokumen biasa: `PATCH /dokumen/:id`, pasal, dan `PUT /dokumen/:id/jadwal`. Total jadwal tetap harus sama dengan uang muka.
+3. `POST /dokumen/:adendumId/finalisasi`. Nilai SPPR di piutang diganti, jadwal lama dinonaktifkan, dan jadwal baru dibuat; keduanya dikirim ke Track. Semua pembayaran yang sudah masuk dialokasikan ulang ke jadwal baru.
+
+Pindah kavling: kavling diganti dulu di PR Track (assignment yang sama). Setelah sinkron, kartu piutang menandai `perluAdendum: true`. Adendum otomatis memakai kavling baru; `biayaPindah` dijurnal dari uang muka ke pendapatan lain-lain saat final.
+
+Ditolak:
+- adendum dari dokumen yang tidak `berlaku`;
+- adendum kedua selagi masih ada adendum draft;
+- `biayaPindah` tanpa pindah kavling;
+- setelah BAST: pindah kavling, atau perubahan nilai SPPR.
+
+Field baru di respons dokumen: `jenisDokumen` (`'SPPR'`/`'ADENDUM'`), `adendum` (`{ alasan, biayaPindah, pindahKavling, kavlingLamaId }`), `berlaku`.
+
 ## Piutang (`piutangStore`)
 
 | Method | Path | Body / query |
@@ -303,6 +327,7 @@ Finalisasi menolak bila: tanpa `assignmentId`, nama pembeli kosong, harga awal 0
 | POST | `/piutang/:id/alokasi/pindah` | `{ dariJadwalId, keJadwalId, nominal }` (pengganti `updateAlokasi`) |
 
 `KavlingTagihan` sama dengan store, ditambah:
+- `perluAdendum`: kavling di PR Track sudah dipindah tetapi SPPR belum diadendum (BAST ditolak selama true);
 - `assignmentId`, `status`, `tanggalBast`, `nomorSppr`, `totalDibayar`, `sisa`, `nilaiCashbackKpr`, `nilaiAdminKpr`;
 - `pembayaran[]` (semua pembayaran Track beserta `statusProses`);
 - per periode: `jadwalId`, `status` (sudah dihitung server, sama dengan `computeStatus`).
@@ -339,4 +364,4 @@ Tampilkan `dataTrackPer` ("data Track per jam HH:MM") di layar yang memakai data
 
 ## Belum tersedia
 
-Adendum SPPR / pindah kavling. Endpoint `/sync/v1` di sisi PR Track (kontraknya di [TrackSyncAPI.md](TrackSyncAPI.md)); sampai siap, dev memakai `npm run mock:track`.
+Endpoint `/sync/v1` di sisi PR Track (kontraknya di [TrackSyncAPI.md](TrackSyncAPI.md)); sampai siap, dev memakai `npm run mock:track`.

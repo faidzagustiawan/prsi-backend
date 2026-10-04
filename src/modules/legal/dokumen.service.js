@@ -21,6 +21,7 @@ import { TIPE_TRANSAKSI_LABEL, TIPE_DARI_TRACK } from '../../shared/constants.js
 import { buatJurnal, toLampiranDto } from '../jurnal/jurnal.service.js';
 import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { findAssignment, kodePembantuPembeli, saldoAkunKp, hitungJadwal } from '../penjualan/penjualan.helpers.js';
+import * as adendum from './adendum.service.js';
 
 const STATUS_FIELD = 'status';
 
@@ -28,7 +29,7 @@ const STATUS_FIELD = 'status';
 
 const PEMBELI_KOSONG = { nama: '', ttl: '', pekerjaan: '', alamat: '', noKtp: '', noHp: '' };
 
-function toDto(d, { unit, pasals = [], riwayat = [], files = [] }) {
+function toDto(d, { unit, pasals = [], riwayat = [], files = [], berlakuIds = new Set() }) {
   const data = d.data ?? {};
   const hargaNett = Number(centsToString(toCents(data.hargaAwal ?? 0) + toCents(data.bphtb ?? 0) + toCents(data.ajbBbn ?? 0)));
   return {
@@ -55,7 +56,14 @@ function toDto(d, { unit, pasals = [], riwayat = [], files = [] }) {
     fasilitasTambahan: data.fasilitasTambahan ?? undefined,
     lampiran: files.map(toLampiranDto),
     riwayatStatus: riwayat,
+    jenisDokumen: d.indukId ? 'ADENDUM' : 'SPPR',
     indukId: d.indukId,
+    adendum: data.adendum ? {
+      alasan: data.adendum.alasan, biayaPindah: data.adendum.biayaPindah ?? 0, pindahKavling: Boolean(data.adendum.pindahKavling),
+      kavlingLamaId: data.adendum.unitLamaId,
+    } : null,
+    // SPPR/adendum yang dipakai kartu piutang sekarang
+    berlaku: berlakuIds.has(d.id),
     createdAt: d.createdAt,
   };
 }
@@ -73,6 +81,8 @@ async function hydrate(rows, tx = db) {
       .orderBy(asc(auditLogs.createdAt)),
     tx.select().from(lampiran).where(and(eq(lampiran.entityType, 'dokumen'), inArray(lampiran.entityId, ids))),
   ]);
+  const berlaku = await tx.select({ id: penjualanKeuangan.dokumenId }).from(penjualanKeuangan).where(inArray(penjualanKeuangan.dokumenId, ids));
+  const berlakuIds = new Set(berlaku.map((b) => b.id));
   const unitMap = new Map(units.map((u) => [u.id, u]));
   const by = (list, key) => list.reduce((m, x) => m.set(x[key], [...(m.get(x[key]) ?? []), x]), new Map());
   const pasalBy = by(pasals, 'dokumenId');
@@ -83,6 +93,7 @@ async function hydrate(rows, tx = db) {
     pasals: pasalBy.get(d.id),
     riwayat: (logBy.get(d.id) ?? []).map((l) => ({ status: l.status, waktu: l.waktu, oleh: l.oleh ?? 'Sistem' })),
     files: fileBy.get(d.id),
+    berlakuIds,
   }));
 }
 
@@ -345,6 +356,17 @@ export async function finalisasi(actor, id) {
     const { errors, nett } = cekFinal(d);
     if (errors.length) throw new AppError(errors.length === 1 ? errors[0] : 'Dokumen belum bisa difinalkan.', 422, errors);
 
+    const selesai = async () => {
+      await tx.update(dokumen).set({ status: 'final', difinalkanOleh: actor.userId, difinalkanPada: new Date(), updatedAt: new Date() })
+        .where(eq(dokumen.id, id));
+      await logStatus(tx, actor, id, 'final');
+    };
+    if (d.indukId) {
+      await adendum.finalisasiTx(tx, actor, d);
+      await selesai();
+      return;
+    }
+
     const { a, unit, customer } = await findAssignment(tx, d.assignmentId);
     if (a.unitId !== d.unitId) throw new AppError('Penjualan PR Track bukan untuk kavling dokumen ini.', 422);
 
@@ -387,9 +409,7 @@ export async function finalisasi(actor, id) {
       });
     }
 
-    await tx.update(dokumen).set({ status: 'final', difinalkanOleh: actor.userId, difinalkanPada: new Date(), updatedAt: new Date() })
-      .where(eq(dokumen.id, id));
-    await logStatus(tx, actor, id, 'final');
+    await selesai();
   });
   return get(id);
 }

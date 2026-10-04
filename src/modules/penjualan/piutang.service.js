@@ -43,7 +43,7 @@ export function statusPeriode({ tanggalJatuhTempo, tagihan, dibayar, tanggalBaya
 }
 
 const base = () => db
-  .select({ pj: penjualanKeuangan, a: trkAssignments, unit: trkUnits, customer: trkCustomers, noDokumen: dokumen.noDokumen })
+  .select({ pj: penjualanKeuangan, a: trkAssignments, unit: trkUnits, customer: trkCustomers, noDokumen: dokumen.noDokumen, unitSppr: dokumen.unitId })
   .from(penjualanKeuangan)
   .innerJoin(trkAssignments, eq(trkAssignments.id, penjualanKeuangan.assignmentId))
   .innerJoin(trkUnits, eq(trkUnits.id, trkAssignments.unitId))
@@ -106,6 +106,8 @@ function toTagihanDto(r, d) {
     status: pj.status,
     dokumenId: pj.dokumenId,
     nomorSppr: r.noDokumen,
+    // Kavling di PR Track sudah dipindah tetapi SPPR belum diadendum
+    perluAdendum: Boolean(r.unitSppr && r.unitSppr !== unit.id),
     nilaiSppr: num(nilai),
     totalDibayar: num(totalDibayar),
     sisa: pj.status === 'batal' ? 0 : num(nilai - totalDibayar),
@@ -189,6 +191,8 @@ export async function bast(actor, id, { tanggal, nilaiHpp = 0 }) {
     const c = await lockPenjualan(tx, id);
     if (c.pj.status !== 'aktif') throw new AppError('Penjualan sudah dibatalkan.', 409);
     if (c.pj.tanggalBast) throw new AppError('Penjualan ini sudah BAST.', 409);
+    const [sppr] = await tx.select({ unitId: dokumen.unitId }).from(dokumen).where(eq(dokumen.id, c.pj.dokumenId)).limit(1);
+    if (sppr && sppr.unitId !== c.unit.id) throw new AppError('Kavling di PR Track sudah dipindah. Buat adendum SPPR sebelum BAST.', 409);
     await assertTidakAdaAntrean(tx, c.a.id);
 
     const { um, bf, saldoUm, saldoBf } = await terkumpul(tx, c);

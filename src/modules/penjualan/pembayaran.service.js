@@ -271,3 +271,18 @@ export async function list({ statusProses, assignmentId }) {
     jurnalId: s?.jurnalId ?? null, nomorJurnal: noBukti ?? null, jurnalStatus: jurnalStatus ?? null,
   }));
 }
+
+/**
+ * Alokasi ulang semua pembayaran terjurnal satu penjualan ke jadwal yang
+ * aktif sekarang, urut tanggal bayar (dipakai setelah adendum mengganti
+ * jadwal). Koreksi manual atas jadwal lama ikut dilepas.
+ */
+export async function realokasiPenjualan(tx, actor, penjualanId, assignmentId) {
+  await tx.delete(alokasiPembayaran).where(eq(alokasiPembayaran.penjualanId, penjualanId));
+  const rows = await tx.select({ p: trkPayments }).from(trkPayments)
+    .innerJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
+    .where(and(eq(trkPayments.assignmentId, assignmentId), eq(statusPembayaranSi.statusProses, 'dijurnal')))
+    .orderBy(asc(trkPayments.tanggal), asc(trkPayments.syncedAt));
+  for (const { p } of rows) await alokasikan(tx, actor, p);
+  return rows.length;
+}
