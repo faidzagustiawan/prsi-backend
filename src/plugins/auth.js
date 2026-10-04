@@ -37,4 +37,5 @@ export default fp(async function authPlugin(fastify) {
       });
     }
   });
+  fastify.authenticate.requiresAuthentication = true;
 });

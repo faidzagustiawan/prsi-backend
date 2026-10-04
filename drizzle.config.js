@@ -11,7 +11,7 @@ if (!process.env.SI_MIGRATOR_DATABASE_URL) {
 }
 
 export default {
-  schema: './src/shared/schemas/finance.schema.js',
+  schema: './src/shared/schemas/*.schema.js',
   out: './drizzle',
   dialect: 'postgresql',
   schemaFilter: ['finance'],

@@ -1,8 +1,8 @@
 // src/plugins/swagger.js
 import fp from 'fastify-plugin';
 import swagger from '@fastify/swagger';
-import swaggerUi from '@fastify/swagger-ui';
 import { env } from '../config/env.js';
+import { openapiInfo, transformRoute, completeDocument } from '../documentation/openapi.js';
 
 /** Menghapus keyword OpenAPI (example/examples) yang tidak dikenali AJV. */
 export function removeExamples(schema) {
@@ -24,28 +24,24 @@ async function swaggerPlugin(fastify) {
   await fastify.register(swagger, {
     openapi: {
       openapi: '3.0.3',
-      info: {
-        title: 'PodorukunSI API',
-        description: 'Dokumentasi API Sistem Informasi Keuangan Podorukun',
-        version: '0.1.0',
-      },
-      servers: [{ url: env.apiUrl, description: 'API Server' }],
+      info: openapiInfo,
+      servers: [
+        { url: env.apiUrl, description: 'API yang didokumentasikan' },
+        ...(env.apiUrl === 'http://localhost:3100' ? [] : [{ url: 'http://localhost:3100', description: 'Development lokal' }]),
+      ],
       components: {
         securitySchemes: {
-          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+          accessCookie: { type: 'apiKey', in: 'cookie', name: 'si_access_token', description: 'Cookie HttpOnly dari POST /api/v1/auth/login; berlaku 15 menit.' },
+          refreshCookie: { type: 'apiKey', in: 'cookie', name: 'si_refresh_token', description: 'Cookie HttpOnly, path /api/v1/auth; berlaku 7 hari dan dirotasi setiap refresh.' },
         },
       },
-      security: [{ bearerAuth: [] }],
     },
+    transform: transformRoute,
+    transformObject: ({ openapiObject }) => completeDocument(openapiObject),
   });
 
-  await fastify.register(swaggerUi, {
-    routePrefix: '/docs',
-    uiConfig: { docExpansion: 'list', deepLinking: false },
-    staticCSP: true,
-    transformStaticCSP: (header) => header,
-    transformSpecificationClone: true,
-  });
+  fastify.get('/openapi.json', { schema: { hide: true } }, async (_request, reply) =>
+    reply.header('Cache-Control', 'no-store').send(fastify.swagger()));
 }
 
 export default fp(swaggerPlugin);

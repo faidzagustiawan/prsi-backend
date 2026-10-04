@@ -1,21 +1,20 @@
-// Membuat user SI (misalnya super_admin pertama).
+// Membuat user SI.
 //
-//   node scripts/create-user.js --email admin@contoh.com --nama "Admin Keuangan" --role super_admin
-//   node scripts/create-user.js --email staf@contoh.com --nama "Staf" --role finance_staff --company <uuid-company-track>
+//   node scripts/create-user.js --email keuangan@contoh.com --nama "Staf Keuangan" --role keuangan
 //
+// Role: admin, keuangan, teknisi, marketing, kontraktor.
 // Password dibaca dari env SI_NEW_USER_PASSWORD supaya tidak tercatat di shell history.
 import bcrypt from 'bcrypt';
 import { parseArgs } from 'node:util';
-import { sql } from 'drizzle-orm';
 import { db, closeDatabase } from '../src/config/database.js';
-import { users, SI_ROLES } from '../src/shared/schemas/finance.schema.js';
+import { users } from '../src/shared/schemas/finance.schema.js';
+import { ROLES } from '../src/shared/constants.js';
 
 const { values } = parseArgs({
   options: {
     email: { type: 'string' },
     nama: { type: 'string' },
     role: { type: 'string' },
-    company: { type: 'string' },
   },
 });
 
@@ -27,23 +26,16 @@ const fail = (msg) => {
 const password = process.env.SI_NEW_USER_PASSWORD;
 
 if (!values.email || !values.nama || !values.role) fail('--email, --nama, dan --role wajib diisi');
-if (!SI_ROLES.includes(values.role)) fail(`--role harus salah satu dari: ${SI_ROLES.join(', ')}`);
-if (values.role !== 'super_admin' && !values.company) fail('--company wajib untuk role selain super_admin');
+if (!ROLES.includes(values.role)) fail(`--role harus salah satu dari: ${ROLES.join(', ')}`);
 if (!password || password.length < 12) fail('SI_NEW_USER_PASSWORD wajib diisi, minimal 12 karakter');
 
 try {
-  if (values.company) {
-    const companies = await db.execute(sql`SELECT id FROM finance.track_companies() WHERE id = ${values.company}::uuid`);
-    if (!companies.length) fail(`Company ${values.company} tidak ditemukan di Track`);
-  }
-
   const [user] = await db
     .insert(users)
     .values({
       email: values.email.trim().toLowerCase(),
       nama: values.nama.trim(),
       role: values.role,
-      companyId: values.company ?? null,
       passwordHash: await bcrypt.hash(password, 12),
     })
     .returning({ id: users.id, email: users.email, role: users.role });

@@ -1,5 +1,6 @@
 // src/config/env.js
 import dotenv from 'dotenv';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -30,6 +31,10 @@ export const env = {
   host: process.env.HOST || '127.0.0.1',
   databaseUrl: process.env.DATABASE_URL,
   reportDatabaseUrl: process.env.REPORT_DATABASE_URL || process.env.DATABASE_URL,
+  // Session pooler / koneksi langsung, untuk advisory lock worker. Kosong = DATABASE_URL
+  // (aman hanya bila DATABASE_URL bukan transaction pooler).
+  sessionDatabaseUrl: process.env.SESSION_DATABASE_URL || process.env.DATABASE_URL,
+  dbPoolMax: parseInt(process.env.DB_POOL_MAX, 10) || 5,
   jwtSecret: process.env.JWT_SECRET,
   cookieSecret: process.env.COOKIE_SECRET,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
@@ -37,6 +42,23 @@ export const env = {
     ? process.env.FRONTEND_URL.split(',')
     : ['http://localhost:5174'],
   apiUrl: process.env.API_URL || 'http://localhost:3100',
+  // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),
+  // Sinkronisasi PR Track (docs/RancanganSistem.md bagian 5-7)
+  sync: {
+    // Saklar utama: false = worker tidak menghubungi Track sama sekali
+    enabled: process.env.SYNC_ENABLED === 'true',
+    // Fase pilot wajib false: tarik Track -> SI tanpa PUT kembali ke Track
+    writeEnabled: process.env.SYNC_WRITE_ENABLED === 'true',
+    trackApiUrl: process.env.TRACK_API_URL || '',
+    readToken: process.env.TRACK_SYNC_TOKEN || '',
+    scheduleToken: process.env.TRACK_SCHEDULE_TOKEN || '',
+    intervalSec: parseInt(process.env.SYNC_INTERVAL_SEC, 10) || 120,
+    pageSize: parseInt(process.env.SYNC_PAGE_SIZE, 10) || 500,
+    gapTimeoutSec: parseInt(process.env.SYNC_GAP_TIMEOUT_SEC, 10) || 600,
+    // Jam rekonsiliasi harian (waktu server)
+    reconcileHour: parseInt(process.env.SYNC_RECONCILE_HOUR, 10) || 2,
+  },
   allowUnsafeDbRole:
     process.env.NODE_ENV === 'development' && process.env.ALLOW_UNSAFE_DB_ROLE === 'true',
 };

@@ -5,6 +5,8 @@
   "type": "module",
   "main": "src/server.js",
   "scripts": {
+    "docs:build": "node scripts/build-api-docs.js",
+    "docs:serve": "node scripts/serve-api-docs.js",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "vitest run",
@@ -12,17 +14,20 @@
     "db:generate": "drizzle-kit generate",
     "db:check": "node scripts/check-migrations.js",
     "db:migrate": "node scripts/check-migrations.js && drizzle-kit migrate",
-    "user:create": "node scripts/create-user.js"
+    "user:create": "node scripts/create-user.js",
+    "seed:dev": "node scripts/seed-dev.js",
+    "worker": "node src/worker.js",
+    "mock:track": "node scripts/mock-track.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
     "@fastify/jwt": "^10.0.0",
+    "@fastify/multipart": "^9.4.0",
     "@fastify/rate-limit": "^10.3.0",
     "@fastify/redis": "^7.2.0",
     "@fastify/swagger": "^9.7.0",
-    "@fastify/swagger-ui": "^5.2.6",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "bcrypt": "^6.0.0",
@@ -34,7 +39,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@apidevtools/swagger-parser": "13.1.0",
     "@eslint/js": "^10.0.1",
+    "@scalar/api-reference": "1.72.4",
     "drizzle-kit": "^0.31.10",
     "eslint": "^10.9.1",
     "globals": "^17.12.0",

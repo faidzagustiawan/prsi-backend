@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>PodorukunSI — API Reference</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230b2239'/%3E%3Ctext x='7' y='24' font-size='24' fill='%235eead4'%3EP%3C/text%3E%3C/svg%3E">
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    .notice { padding: 12px 24px; background: #0b2239; color: #e2e8f0; font-size: 13px; line-height: 1.6; }
+    .notice strong { color: #5eead4; }
+  </style>
+</head>
+<body>
+  <div class="notice"><strong>PodorukunSI / Backend API</strong> · Referensi lokal · Contoh memakai data ilustrasi. Untuk menguji API produksi, gunakan alur cookie cURL pada panduan.</div>
+  <div id="app"></div>
+  <script>/* SCALAR_BUNDLE */</script>
+  <script>
+    Scalar.createApiReference('#app', {
+      content: /* OPENAPI_DOCUMENT */,
+      theme: 'default',
+      layout: 'modern',
+      darkMode: false,
+      withDefaultFonts: false,
+      hideClientButton: true,
+      hideTestRequestButton: true,
+      persistAuth: false,
+      telemetry: false,
+      agent: { disabled: true },
+      showDeveloperTools: 'never',
+      operationTitleSource: 'summary',
+      showOperationId: true,
+      showExtensions: ['x-roles'],
+      defaultHttpClient: { targetKey: 'shell', clientKey: 'curl' }
+    });
+  </script>
+</body>
+</html>

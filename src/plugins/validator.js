@@ -6,7 +6,7 @@ import { removeExamples } from './swagger.js';
 
 /**
  * Compiler validasi request. Selalu diregistrasi supaya aturan validasi identik
- * di development dan produksi (Swagger hanya aktif di development).
+ * di development dan produksi. Metadata dokumentasi tidak mengubah validasi.
  */
 async function validatorPlugin(fastify) {
   const ajv = new Ajv({

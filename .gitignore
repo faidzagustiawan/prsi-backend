@@ -4,6 +4,10 @@ coverage/
 .env
 .env.*
 !.env.example
+!.env.production.example
 *.log
 .DS_Store
 drizzle.tmp.config.js
+storage/
+docs/generated/
+.playwright-mcp/
