@@ -11,7 +11,10 @@ import { count } from 'drizzle-orm';
 import { db, closeDatabase } from '../src/config/database.js';
 import { env } from '../src/config/env.js';
 import { trkCompanies, trkProjects, trkClusters, trkUnits, trkCustomers, trkAssignments } from '../src/shared/schemas/track.schema.js';
-import { akun, kodePembantu, masterPt } from '../src/shared/schemas/akuntansi.schema.js';
+import { akun, kodePembantu, masterPt, akunSistem } from '../src/shared/schemas/akuntansi.schema.js';
+import { pasal, templateDokumen, templatePasal } from '../src/shared/schemas/penjualan.schema.js';
+import { trkPayments } from '../src/shared/schemas/track.schema.js';
+import { asc } from 'drizzle-orm';
 
 if (!env.isDevelopment) {
   console.error('✖ seed-dev hanya untuk NODE_ENV=development');
@@ -49,14 +52,81 @@ const COA = [
 
 const track = (extra) => ({ trackId: randomUUID(), rowVersion: 1, ...extra });
 
+const AKUN_SISTEM_SEED = {
+  titipan_booking_fee: '214010', uang_muka_penjualan: '215010', piutang_penjualan: '113010', penjualan: '410000',
+  hpp: '510000', persediaan_kavling: '131010', pendapatan_lain: '420000', hutang_pengembalian: '219010',
+  beban_cashback_kpr: '612010', beban_admin_kpr: '612020',
+};
+
+async function seedAkunSistem() {
+  const [{ n }] = await db.select({ n: count() }).from(akunSistem);
+  if (Number(n) > 0) return console.log('• Akun sistem sudah diatur, dilewati.');
+  const rows = await db.select({ id: akun.id, kode: akun.kode }).from(akun);
+  const byKode = new Map(rows.map((r) => [r.kode, r.id]));
+  await db.insert(akunSistem).values(Object.entries(AKUN_SISTEM_SEED).map(([kunci, kode]) => ({ kunci, akunId: byKode.get(kode) })));
+  console.log('✔ Akun sistem dipetakan.');
+}
+
+// Pasal dan template dari dummy frontend (pustakaPasalStore, templateDokumenStore)
+const f = (key, label, tipe = 'teks') => ({ id: randomUUID(), key, label, tipe });
+const PASAL = [
+  ['identitas', 'Pasal 1 — Identitas Para Pihak', 'semua',
+    'Pihak Pertama adalah {nama_pt}, diwakili oleh {nama_direktur}, berkedudukan di {alamat_pt}. Pihak Kedua adalah {nama_pembeli}, bertempat tinggal di {alamat_pembeli}.', []],
+  ['obyek', 'Pasal 2 — Obyek Perjanjian', 'semua',
+    'Pihak Pertama setuju untuk menjual kavling nomor {no_kavling} seluas {luas_kavling} m² yang terletak di {nama_perumahan} kepada Pihak Kedua.', []],
+  ['kpr', 'Pasal 3 — Harga dan Cara Pembayaran KPR', 'kpr',
+    'Harga jual disepakati sebesar Rp {harga_nett} termasuk BPHTB dan AJB. Uang muka sebesar Rp {uang_muka} dibayar pada {tanggal_perjanjian}. Sisa sebesar Rp {sisa_kpr} dilunasi melalui fasilitas KPR.', []],
+  ['cash', 'Pasal 3 — Harga dan Cara Pembayaran Tunai', 'cash',
+    'Harga jual disepakati sebesar Rp {harga_nett} dibayar tunai seluruhnya pada {tanggal_perjanjian}.', []],
+  ['inhouse', 'Pasal 3 — Harga dan Cara Pembayaran In House', 'in_house',
+    'Harga jual disepakati sebesar Rp {harga_nett}. Cicilan sebesar Rp {cicilan_per_bulan} per bulan selama {tenor_bulan} bulan dimulai sejak {tanggal_mulai}.',
+    [f('cicilan_per_bulan', 'Cicilan per Bulan', 'angka'), f('tenor_bulan', 'Tenor (bulan)', 'angka'), f('tanggal_mulai', 'Tanggal Mulai', 'tanggal')]],
+];
+
+async function seedLegal() {
+  const [{ n }] = await db.select({ n: count() }).from(pasal);
+  if (Number(n) > 0) return console.log('• Pasal sudah ada, dilewati.');
+  await db.transaction(async (tx) => {
+    const id = {};
+    for (const [key, judul, berlakuUntuk, isi, fields] of PASAL) {
+      const [row] = await tx.insert(pasal).values({ judul, isi, berlakuUntuk, fields }).returning({ id: pasal.id });
+      id[key] = row.id;
+    }
+    const pts = await tx.select().from(masterPt).orderBy(asc(masterPt.namaPt));
+    for (const pt of pts) {
+      for (const [tipe, label, extra] of [['kpr', 'KPR', 'kpr'], ['cash', 'CASH', 'cash'], ['in_house', 'IH', 'inhouse']]) {
+        const [t] = await tx.insert(templateDokumen).values({
+          ptId: pt.id, tipeTransaksi: tipe, nama: `SPPR ${label}`, polaNomor: `{PT}/{TAHUN}/${label}/{NO}`,
+        }).returning();
+        const urut = [id.identitas, id.obyek, id[extra]];
+        await tx.insert(templatePasal).values(urut.map((pasalId, i) => ({ templateId: t.id, pasalId, urutan: i + 1 })));
+      }
+    }
+  });
+  console.log('✔ Pustaka pasal dan template SPPR dibuat.');
+}
+
+// Pembayaran contoh seolah-olah sudah ditarik dari PR Track
+async function seedPembayaranTrack() {
+  const [{ n }] = await db.select({ n: count() }).from(trkPayments);
+  if (Number(n) > 0) return console.log('• Pembayaran PR Track contoh sudah ada, dilewati.');
+  const asg = await db.execute(`SELECT a.id, c.nama FROM finance.trk_assignments a JOIN finance.trk_customers c ON c.id = a.customer_id ORDER BY c.nama`);
+  const andi = asg.find((a) => a.nama === 'Andi Wijaya');
+  if (!andi) return;
+  const bukti = 'https://storage.podorukun.example/bukti/transfer-andi.jpg';
+  const base = { assignmentId: andi.id, statusVerifikasi: 'terverifikasi', rekeningTujuan: '123-000-456-7890', buktiUrl: bukti };
+  await db.insert(trkPayments).values([
+    track({ ...base, tanggal: '2026-10-01', nominal: '10000000.00', jenis: 'booking_fee', catatan: 'Booking fee' }),
+    track({ ...base, tanggal: '2026-10-02', nominal: '5000000.00', jenis: 'uang_muka', statusVerifikasi: 'menunggu', catatan: 'Belum diverifikasi' }),
+  ]);
+  console.log('✔ Pembayaran PR Track contoh dibuat.');
+}
+
+
 try {
   const [{ n }] = await db.select({ n: count() }).from(akun);
-  if (Number(n) > 0) {
-    console.log('• Akun sudah ada, seed dilewati.');
-    process.exit(0);
-  }
-
-  await db.transaction(async (tx) => {
+  if (Number(n) > 0) console.log('• Proyek, PT, COA, kode pembantu sudah ada, dilewati.');
+  else await db.transaction(async (tx) => {
     const [company] = await tx.insert(trkCompanies).values(track({ nama: 'Podorukun Group', kode: 'PDR' })).returning();
 
     const projects = await tx.insert(trkProjects).values([
@@ -113,7 +183,10 @@ try {
       ('kode_pembantu','KT',0,0,1),('kode_pembantu','PJ',0,0,1),('kode_pembantu','PB',0,0,2)`);
   });
 
-  console.log('✔ Seed dev selesai: 3 proyek, 2 PT, akun COA, kode pembantu.');
+  await seedAkunSistem();
+  await seedLegal();
+  await seedPembayaranTrack();
+  console.log('✔ Seed dev selesai.');
 } catch (err) {
   console.error('✖', err.message);
   process.exitCode = 1;

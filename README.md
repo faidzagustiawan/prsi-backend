@@ -22,9 +22,10 @@ src/
   middleware/       authorize, validate
   modules/          auth, proyek, master-pt, akun, kode-pembantu, saldo-awal,
                     periode, jurnal, lampiran, laporan, hutang, pinjaman,
-                    kontrak, shm
+                    kontrak, shm, akun-sistem, legal (pasal, template,
+                    dokumen), penjualan (piutang, pembayaran PR Track)
   shared/
-    schemas/        finance (users, audit), track (cermin trk_*), akuntansi, hutang
+    schemas/        finance (users, audit), track (cermin trk_*), akuntansi, hutang, penjualan
     constants.js    nilai pilihan tetap (VARCHAR + validasi aplikasi)
     utils/
 test/

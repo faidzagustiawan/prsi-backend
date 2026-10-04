@@ -7,7 +7,7 @@ import { uuidSchema, idParams } from '../../shared/utils/zod.js';
 import * as service from './lampiran.service.js';
 
 const tags = ['Lampiran'];
-const ownerQuery = { query: z.object({ entityType: z.enum(['jurnal']), entityId: uuidSchema }) };
+const ownerQuery = { query: z.object({ entityType: z.enum(['jurnal', 'dokumen']), entityId: uuidSchema }) };
 
 export default async function lampiranRoutes(fastify) {
   const guard = keuanganOnly(fastify);
@@ -34,6 +34,8 @@ export default async function lampiranRoutes(fastify) {
     schema: { tags, description: 'Unduh berkas lampiran' },
   }, async (request, reply) => {
     const { row, fullPath } = await service.findForDownload(request.params.id);
+    // Bukti dari PR Track disimpan sebagai tautan ke penyimpanan Track
+    if (row.sumber === 'pr_track') return reply.redirect(row.path);
     const disposition = request.query?.inline === '1' ? 'inline' : 'attachment';
     return reply
       .type(row.mime)

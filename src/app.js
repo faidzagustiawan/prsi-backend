@@ -30,6 +30,11 @@ import hutangRoutes from './modules/hutang/hutang.routes.js';
 import pinjamanRoutes from './modules/pinjaman/pinjaman.routes.js';
 import kontrakRoutes from './modules/kontrak/kontrak.routes.js';
 import shmRoutes from './modules/shm/shm.routes.js';
+import akunSistemRoutes from './modules/akun-sistem/akun-sistem.routes.js';
+import pasalRoutes from './modules/legal/pasal.routes.js';
+import templateRoutes from './modules/legal/template.routes.js';
+import dokumenRoutes from './modules/legal/dokumen.routes.js';
+import { piutangRoutes, pembayaranTrackRoutes } from './modules/penjualan/piutang.routes.js';
 import { LAMPIRAN_MAKS_BYTES } from './shared/constants.js';
 
 export async function buildApp({ logger = true } = {}) {
@@ -107,6 +112,12 @@ export async function buildApp({ logger = true } = {}) {
   await app.register(pinjamanRoutes, { prefix: '/api/v1/pinjaman' });
   await app.register(kontrakRoutes, { prefix: '/api/v1/kontrak' });
   await app.register(shmRoutes, { prefix: '/api/v1/shm' });
+  await app.register(akunSistemRoutes, { prefix: '/api/v1/akun-sistem' });
+  await app.register(pasalRoutes, { prefix: '/api/v1/pasal' });
+  await app.register(templateRoutes, { prefix: '/api/v1/template-dokumen' });
+  await app.register(dokumenRoutes, { prefix: '/api/v1/dokumen' });
+  await app.register(piutangRoutes, { prefix: '/api/v1/piutang' });
+  await app.register(pembayaranTrackRoutes, { prefix: '/api/v1/pembayaran-track' });
 
   app.get('/', async (_request, reply) => reply.code(404).type('text/plain').send(''));
 

@@ -17,6 +17,7 @@ import { recordAudit, AuditAction } from '../../shared/utils/audit.js';
 import { LAMPIRAN_MAKS_BYTES } from '../../shared/constants.js';
 import { toLampiranDto } from '../jurnal/jurnal.service.js';
 import * as jurnalRepo from '../jurnal/jurnal.repository.js';
+import { dokumen } from '../../shared/schemas/penjualan.schema.js';
 
 const EXT = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
 
@@ -40,6 +41,16 @@ const OWNERS = {
       }
       if (['dikoreksi', 'balik'].includes(j.status)) {
         throw new AppError('Jurnal ini sudah dikoreksi.', 409);
+      }
+    },
+  },
+  // Scan SPPR yang sudah ditandatangani, atau berkas pendukung dokumen legal
+  dokumen: {
+    async assertWritable(entityId, { forDelete = false } = {}) {
+      const [d] = await db.select({ status: dokumen.status }).from(dokumen).where(eq(dokumen.id, entityId)).limit(1);
+      if (!d) throw new AppError('Dokumen tidak ditemukan.', 404);
+      if (forDelete && d.status === 'ditandatangani') {
+        throw new AppError('Lampiran dokumen yang sudah ditandatangani tidak bisa dihapus.', 409);
       }
     },
   },

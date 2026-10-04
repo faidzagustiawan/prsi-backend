@@ -226,6 +226,105 @@ Perbedaan dari store: kavling dipilih dari `GET /proyek/:id/kavling` dan dikirim
 
 Satu kavling satu SHM, nomor SHM unik. Status `dijaminkan` wajib `pinjamanBankId`; `namaBank` diisi server dari pinjaman. `lokasiKustom` tidak dipakai: `lokasi` teks bebas, sarannya dari `/shm/opsi`. Riwayat dicatat server.
 
+## Akun sistem
+
+Peran akun untuk jurnal otomatis penjualan. Perlu diatur sekali oleh Keuangan (seed dev sudah mengisinya).
+
+| Method | Path | Body |
+| --- | --- | --- |
+| GET | `/akun-sistem` | `[{ kunci, label, akunId }]` |
+| PUT | `/akun-sistem/:kunci` | `{ akunId }` |
+
+Kunci: `titipan_booking_fee`, `uang_muka_penjualan`, `piutang_penjualan`, `penjualan`, `hpp`, `persediaan_kavling`, `pendapatan_lain`, `hutang_pengembalian`, `beban_cashback_kpr`, `beban_admin_kpr`.
+
+## Legal: pustaka pasal (`pustakaPasalStore`)
+
+| Method | Path | Body / query |
+| --- | --- | --- |
+| GET | `/pasal` | `?berlaku=semua\|cash\|kpr\|in_house&aktif=true\|false` |
+| GET | `/pasal/:id/dipakai` | `{ template, dokumen }` (pengganti `hitungDipakai`) |
+| POST | `/pasal` | `{ judul, isi, berlaku, ptId?, fields: [{ key, label, tipe }], aktif? }` |
+| PATCH | `/pasal/:id` | Kolom yang diubah; `{ aktif: false }` = `nonaktifkan` |
+| DELETE | `/pasal/:id` | Hanya bila belum dipakai template/dokumen |
+
+## Legal: template (`templateDokumenStore`)
+
+| Method | Path | Body |
+| --- | --- | --- |
+| GET | `/template-dokumen` | `?ptId` |
+| POST | `/template-dokumen` | `{ ptId, tipeTransaksi: 'Cash'\|'KPR'\|'In House', nama?, polaNomor, pasalIds[], aktif? }` |
+| PATCH | `/template-dokumen/:id` | Kolom yang diubah; `pasalIds` = urutan baru |
+| POST | `/template-dokumen/:id/duplikat` | Salinan dibuat nonaktif |
+| DELETE | `/template-dokumen/:id` | Hanya bila belum dipakai dokumen |
+
+`polaNomor` wajib memuat `{NO}`. Token lain: `{PT}` (singkatan PT), `{TAHUN}`, `{BULAN}`, `{TIPE}`. Nomor urut per PT, tipe, dan tahun.
+
+## Legal: dokumen SPPR (`dokumenLegalStore`)
+
+| Method | Path | Body |
+| --- | --- | --- |
+| GET | `/dokumen` | `?perumahanId&status&q` |
+| GET | `/dokumen/penjualan-tersedia` | `?proyekId` → penjualan PR Track yang belum punya SPPR final (kavling, pembeli, tipe) |
+| GET | `/dokumen/:id` | |
+| POST | `/dokumen` | `{ ptId, kavlingId, assignmentId?, templateId?, tipeTransaksi?, pembeli, hargaAwal, bphtb, ajbBbn, uangMuka, tanggalPerjanjian, fasilitasTambahan?, status? }` |
+| PATCH | `/dokumen/:id` | Pengganti `updateDataUtama` (+ `assignmentId`) |
+| DELETE | `/dokumen/:id` | Draft saja |
+| POST | `/dokumen/:id/pasal` | `{ pustakaId }` atau `{ judul, isi, fields }`, `index?` |
+| PATCH | `/dokumen/:id/pasal/:pasalId` | `{ judul?, isi?, fieldValues?: { key: nilai } }` (pengganti `updatePasalUtama` + `updatePasalField`) |
+| DELETE | `/dokumen/:id/pasal/:pasalId` | |
+| PUT | `/dokumen/:id/pasal-urutan` | `{ pasalIds }` semua id pasal, urutan baru (pengganti `reorderPasal`) |
+| PUT | `/dokumen/:id/jadwal` | `{ tanggalAcuan, nominalPerBulan, tanggalMulai, jatuhTempoTerakhir, baris? }` |
+| DELETE | `/dokumen/:id/jadwal` | |
+| PATCH | `/dokumen/:id/jadwal/baris/:barisId` | `{ jumlah }` |
+| POST | `/dokumen/:id/finalisasi` | Pengganti `updateStatus('final')` + `addFromLegal` |
+| POST | `/dokumen/:id/tandatangani` | final → ditandatangani |
+
+Perbedaan dari store:
+- Buat dokumen dimulai dari **penjualan PR Track** (`GET /dokumen/penjualan-tersedia`), bukan `DUMMY_KAVLING`. `assignmentId` mengisi kavling, tipe, dan data pembeli awal. Tanpa `assignmentId` draft tetap bisa dibuat, tetapi finalisasi ditolak.
+- Pasal disalin server dari template aktif PT + tipe (atau `templateId`). Tidak perlu mengirim `pasalDokumen` dan `ptSingkatan`.
+- `noDokumen` dibuat server dari pola template.
+- Jadwal dihitung server bila `baris` tidak dikirim. Tanggal acuan 29–31 jatuh ke akhir bulan yang lebih pendek.
+- `riwayatStatus` dicatat server. `lampiranScan` diganti lampiran: `POST /lampiran?entityType=dokumen&entityId=<id>`.
+- Respons menambah `kavling` (kode, tipe, luas), `perumahanId`, `hargaNett`.
+- Placeholder `{key}` tetap diisi di frontend (`autoValues`), seperti sekarang.
+
+Finalisasi menolak bila: tanpa `assignmentId`, nama pembeli kosong, harga awal 0, total jadwal ≠ uang muka, atau penjualan itu sudah punya SPPR final. Bila lolos, dalam satu transaksi: kartu piutang dibuat, jadwal masuk `jadwal_angsuran` dan antre dikirim ke PR Track, dan booking fee yang sudah masuk dipindah dari Titipan booking fee ke Uang muka penjualan.
+
+## Piutang (`piutangStore`)
+
+| Method | Path | Body / query |
+| --- | --- | --- |
+| GET | `/piutang` | `?proyekId&statusBast` → `KavlingTagihan[]` |
+| GET | `/piutang/ringkasan` | `?proyekId` → `{ jumlah, totalNilaiKontrak, totalDibayar, totalSisa }` |
+| GET | `/piutang/:id` | |
+| POST | `/piutang/:id/bast` | `{ tanggal, nilaiHpp? }` |
+| POST | `/piutang/:id/batal` | `{ tanggal, potongan, alasan? }` (belum BAST) |
+| POST | `/piutang/:id/biaya-kpr` | `{ jenis: 'cashback'\|'admin', tanggal, nominal, akunKasId, noBukti? }` |
+| POST | `/piutang/:id/alokasi/pindah` | `{ dariJadwalId, keJadwalId, nominal }` (pengganti `updateAlokasi`) |
+
+`KavlingTagihan` sama dengan store, ditambah:
+- `assignmentId`, `status`, `tanggalBast`, `nomorSppr`, `totalDibayar`, `sisa`, `nilaiCashbackKpr`, `nilaiAdminKpr`;
+- `pembayaran[]` (semua pembayaran Track beserta `statusProses`);
+- per periode: `jadwalId`, `status` (sudah dihitung server, sama dengan `computeStatus`).
+
+`dibayar` per periode hanya berasal dari pembayaran yang sudah dijurnal. Kartu piutang tidak bisa diubah langsung; angkanya berubah lewat pembayaran Track, koreksi alokasi, BAST, atau batal.
+
+## Pembayaran PR Track (Alur 2)
+
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| GET | `/pembayaran-track` | `?statusProses=belum_diproses\|menunggu\|dijurnal\|gagal_validasi\|perlu_ditinjau&assignmentId` |
+| POST | `/pembayaran-track/proses` | Proses semua yang belum/menunggu (nanti dijalankan worker) |
+| POST | `/pembayaran-track/:id/proses` | Proses ulang satu pembayaran |
+
+Untuk layar antrean Keuangan (tombol "Sinkron" di halaman Piutang):
+- `menunggu`: belum diverifikasi di Track, atau auto-injeksi KPR.
+- `gagal_validasi` tanpa `jurnalId`: data Track salah (penjualan, jenis, rekening tujuan). Perbaiki di Track, lalu proses ulang.
+- `gagal_validasi` dengan jurnal draft: bukti kurang, terindikasi duplikat, atau periode terkunci. Lengkapi lalu posting jurnalnya (`POST /jurnal/:id/posting`); alokasi berjalan otomatis setelah posting.
+- `perlu_ditinjau`: berubah di Track setelah dijurnal. Jurnal tidak diubah otomatis. Balik jurnalnya (`POST /jurnal/:id/balik`), lalu proses ulang.
+
+Tutup buku (`/periode/tutup`) ditolak selama masih ada `gagal_validasi` atau `perlu_ditinjau` di bulan itu.
+
 ## Belum tersedia (fase berikutnya)
 
-Legal (pustaka pasal, template, dokumen SPPR), piutang (jadwal angsuran, alokasi pembayaran), dan sinkronisasi pembayaran dari PR Track. Store-nya tetap dipakai sampai endpoint-nya siap.
+Worker sinkronisasi PR Track (tarik event ke `trk_*`, kirim `outbox_track`, rekonsiliasi harian) dan adendum SPPR / pindah kavling. Sampai worker jalan, data `trk_*` di dev diisi `npm run seed:dev`.

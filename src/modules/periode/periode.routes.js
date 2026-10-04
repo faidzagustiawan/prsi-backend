@@ -2,7 +2,7 @@
 //
 // Tutup buku per PT per bulan (Alur 6). Periode terkunci tidak bisa diubah;
 // koreksi berikutnya lewat jurnal balik di periode berjalan.
-import { and, asc, count, eq, gte, lt } from 'drizzle-orm';
+import { and, asc, count, eq, gte, lt, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
 import { periode, masterPt, jurnal } from '../../shared/schemas/akuntansi.schema.js';
@@ -59,11 +59,21 @@ export default async function periodeRoutes(fastify) {
         .where(and(eq(periode.ptId, ptId), eq(periode.tahun, y), eq(periode.bulan, m))).for('update').limit(1);
       if (p.status === 'terkunci') throw new AppError(`Periode ${bulan} sudah dikunci.`, 409);
 
-      // Antrean yang harus nol sebelum tutup buku. Pembayaran Gagal validasi /
-      // Perlu ditinjau ditambahkan bersama modul sinkronisasi PR Track.
+      // Antrean yang harus nol sebelum tutup buku (Alur 6)
       const [{ n }] = await tx.select({ n: count() }).from(jurnal)
         .where(and(eq(jurnal.ptId, ptId), eq(jurnal.status, 'draft'), gte(jurnal.tanggal, start), lt(jurnal.tanggal, end)));
       if (Number(n) > 0) throw new AppError(`Masih ada ${n} jurnal draft di periode ${bulan}.`, 422);
+      const [antrean] = await tx.execute(sql`
+        SELECT COUNT(*)::int n
+        FROM finance.trk_payments p
+        JOIN finance.status_pembayaran_si s ON s.payment_id = p.id
+        JOIN finance.trk_assignments a ON a.id = p.assignment_id
+        JOIN finance.trk_units u ON u.id = a.unit_id
+        JOIN finance.master_pt pt ON pt.proyek_id = u.project_id
+        WHERE pt.id = ${ptId} AND s.status_proses IN ('gagal_validasi', 'perlu_ditinjau')
+          AND p.tanggal >= ${start} AND p.tanggal < ${end}
+      `);
+      if (antrean.n > 0) throw new AppError(`Masih ada ${antrean.n} pembayaran PR Track Gagal validasi / Perlu ditinjau di periode ${bulan}.`, 422);
 
       const [updated] = await tx.update(periode)
         .set({ status: 'terkunci', ditutupOleh: actor.userId, ditutupPada: new Date(), updatedAt: new Date() })

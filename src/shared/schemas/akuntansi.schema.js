@@ -174,3 +174,11 @@ export const lampiran = finance.table('lampiran', {
   diunggahOleh: uuid('diunggah_oleh').references(() => users.id),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (t) => [index('lampiran_entity_idx').on(t.entityType, t.entityId)]);
+
+// Akun untuk peran tetap di jurnal otomatis (peta jurnal ERD). Diatur
+// Keuangan, bukan di-hardcode per kode akun.
+export const akunSistem = finance.table('akun_sistem', {
+  kunci: varchar('kunci', { length: 40 }).primaryKey(),
+  akunId: uuid('akun_id').references(() => akun.id).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});

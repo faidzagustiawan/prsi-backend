@@ -304,6 +304,13 @@ export async function updateManual(actor, id, body) {
 const postingGuards = new Map();
 export const registerPostingGuard = (refType, fn) => postingGuards.set(refType, fn);
 
+// Dipanggil di transaksi yang sama setelah draft diposting, mis. alokasi
+// pembayaran PR Track ke jadwal angsuran.
+const afterPosting = new Map();
+export const registerAfterPosting = (refType, fn) => afterPosting.set(refType, fn);
+const afterReverse = new Map();
+export const registerAfterReverse = (refType, fn) => afterReverse.set(refType, fn);
+
 async function checkDraft(tx, j, errors) {
   const { rowsByJurnal } = await repo.loadChildren([j.id], tx);
   const rows = rowsByJurnal.get(j.id) ?? [];
@@ -343,6 +350,8 @@ export async function postingTx(tx, actor, id) {
     await recordAuditTx(tx, {
       userId: actor.userId, ip: actor.ip, action: AuditAction.POST, entity: 'jurnal', entityId: c.item.id, summary: c.item.noBukti,
     });
+    const hook = c.item.refType && afterPosting.get(c.item.refType);
+    if (hook) await hook(tx, actor, c.item);
   }
 }
 
@@ -476,6 +485,8 @@ export async function balik(actor, id, { tanggal = today(), uraian } = {}) {
     }, normalizeRows(rows));
 
     await repo.updateJurnal(tx, id, { status: 'dikoreksi', dibalikOlehId: created.id });
+    const hook = j.refType && afterReverse.get(j.refType);
+    if (hook) await hook(tx, actor, j);
     await recordAuditTx(tx, {
       userId: actor.userId, ip: actor.ip, action: AuditAction.REVERSE, entity: 'jurnal', entityId: id,
       summary: `${j.noBukti} dibalik oleh ${created.noBukti}`,
