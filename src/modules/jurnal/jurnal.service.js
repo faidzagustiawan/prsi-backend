@@ -47,6 +47,7 @@ export const toJurnalDto = (j, rows = [], files = []) => {
     nomorJurnal: j.noBukti,
     tanggal: j.tanggal,
     keterangan: j.uraian,
+    noReferensi: j.noReferensi,
     proyekId: j.proyekId,
     ptId: j.ptId,
     sumber: j.sumber,
@@ -171,7 +172,7 @@ async function nomorBukti(tx, prefix, tanggal) {
  * Membuat jurnal di dalam transaksi `tx`.
  *
  * input: { tanggal, uraian, proyekId?, status: 'draft'|'diposting', sumber,
- *          refType?, refId?, mirrorId?, rows: [{ akunId, kodePembantuId?, keterangan?, debit, kredit }] }
+ *          noReferensi?, refType?, refId?, mirrorId?, rows: [{ akunId, kodePembantuId?, keterangan?, debit, kredit }] }
  * opts.lampiranCount: jumlah lampiran bukti milik dokumen asal (modul otomatis
  *          yang menyimpan buktinya di entitasnya sendiri). Jurnal baru belum
  *          punya lampiran sendiri, jadi posting langsung dari layar manual
@@ -200,6 +201,7 @@ export async function buatJurnal(tx, actor, input, opts = {}) {
     ptId: header.ptId,
     status: input.status,
     sumber: input.sumber,
+    noReferensi: input.noReferensi ?? null,
     refType: input.refType ?? null,
     refId: input.refId ?? null,
     mirrorId: input.mirrorId ?? null,
@@ -279,6 +281,7 @@ export async function updateManual(actor, id, body) {
     await repo.updateJurnal(tx, id, {
       tanggal: header.tanggal,
       uraian: body.uraian.trim(),
+      noReferensi: body.noReferensi ?? null,
       proyekId: header.proyekId,
       ptId: header.ptId,
       status: posting ? 'diposting' : 'draft',
@@ -296,30 +299,113 @@ export async function updateManual(actor, id, body) {
   return get(id);
 }
 
-export async function postDraft(actor, id) {
-  await db.transaction(async (tx) => {
-    const j = await repo.lockJurnal(tx, id);
-    if (!j) throw new AppError('Jurnal tidak ditemukan.', 404);
-    if (j.status !== 'draft') throw new AppError('Hanya jurnal draft yang bisa diposting.', 409);
+// Modul pemilik jurnal bisa menolak posting dari layar jurnal, mis. transaksi
+// pinjaman yang rincian pokok/bunganya belum diisi.
+const postingGuards = new Map();
+export const registerPostingGuard = (refType, fn) => postingGuards.set(refType, fn);
 
-    const { rowsByJurnal } = await repo.loadChildren([id], tx);
-    const rows = rowsByJurnal.get(id) ?? [];
-    const errors = [];
-    // PT bisa baru terhubung ke proyek setelah draft dibuat, jadi diresolusi ulang
-    const header = await resolveHeader(tx, { tanggal: j.tanggal, proyekId: j.proyekId }, errors);
-    const { akunMap, kpMap } = await checkReferences(tx, rows, errors);
-    const lampiranCount = await repo.countLampiran(id, tx);
-    if (!errors.length) await checkPosting(tx, { header, rows, akunMap, kpMap, lampiranCount }, errors);
-    if (errors.length) fail(errors);
+async function checkDraft(tx, j, errors) {
+  const { rowsByJurnal } = await repo.loadChildren([j.id], tx);
+  const rows = rowsByJurnal.get(j.id) ?? [];
+  // PT bisa baru terhubung ke proyek setelah draft dibuat, jadi diresolusi ulang
+  const header = await resolveHeader(tx, { tanggal: j.tanggal, proyekId: j.proyekId }, errors);
+  const { akunMap, kpMap } = await checkReferences(tx, rows, errors);
+  const guard = j.refType && postingGuards.get(j.refType);
+  if (guard) await guard(tx, j, errors);
+  return { header, rows, akunMap, kpMap };
+}
 
-    await repo.updateJurnal(tx, id, {
-      status: 'diposting', ptId: header.ptId, dipostingOleh: actor.userId, dipostingPada: new Date(),
+/**
+ * Posting draft di dalam transaksi. Jurnal antar proyek (mirror) diposting
+ * berpasangan; lampiran bukti boleh ada di salah satu sisi.
+ */
+export async function postingTx(tx, actor, id) {
+  const j = await repo.lockJurnal(tx, id);
+  if (!j) throw new AppError('Jurnal tidak ditemukan.', 404);
+  if (j.status !== 'draft') throw new AppError('Hanya jurnal draft yang bisa diposting.', 409);
+  const pair = j.mirrorId ? await repo.lockJurnal(tx, j.mirrorId) : null;
+  const group = pair && pair.status === 'draft' ? [j, pair] : [j];
+
+  const errors = [];
+  const checked = [];
+  for (const item of group) checked.push({ item, ...(await checkDraft(tx, item, errors)) });
+  let lampiranCount = 0;
+  for (const item of group) lampiranCount += await repo.countLampiran(item.id, tx);
+  if (!errors.length) {
+    for (const c of checked) await checkPosting(tx, { ...c, lampiranCount }, errors);
+  }
+  if (errors.length) fail(errors);
+
+  for (const c of checked) {
+    await repo.updateJurnal(tx, c.item.id, {
+      status: 'diposting', ptId: c.header.ptId, dipostingOleh: actor.userId, dipostingPada: new Date(),
     });
     await recordAuditTx(tx, {
-      userId: actor.userId, ip: actor.ip, action: AuditAction.POST, entity: 'jurnal', entityId: id, summary: j.noBukti,
+      userId: actor.userId, ip: actor.ip, action: AuditAction.POST, entity: 'jurnal', entityId: c.item.id, summary: c.item.noBukti,
     });
-  });
+  }
+}
+
+export async function postDraft(actor, id) {
+  await db.transaction((tx) => postingTx(tx, actor, id));
   return get(id);
+}
+
+/** Modul mengganti isi draft miliknya (mis. rincian pokok/bunga baru diisi). */
+export async function gantiDraftTx(tx, actor, id, { tanggal, uraian, rows }) {
+  const j = await repo.lockJurnal(tx, id);
+  if (!j || j.status !== 'draft') throw new AppError('Jurnal draft tidak ditemukan.', 409);
+  const errors = [];
+  const normalized = normalizeRows(rows);
+  const header = await resolveHeader(tx, { tanggal: tanggal ?? j.tanggal, proyekId: j.proyekId }, errors);
+  await checkReferences(tx, normalized, errors);
+  if (errors.length) fail(errors);
+  await repo.updateJurnal(tx, id, { tanggal: header.tanggal, ptId: header.ptId, ...(uraian ? { uraian } : {}) });
+  await repo.replaceRows(tx, id, normalized);
+  await recordAuditTx(tx, {
+    userId: actor.userId, ip: actor.ip, action: AuditAction.UPDATE, entity: 'jurnal', entityId: id, summary: `${j.noBukti} diubah modul`,
+  });
+}
+
+/**
+ * Modul menghapus jurnalnya: draft, atau diposting selama periode terbuka.
+ * Pasangan mirror ikut dihapus. Mengembalikan false bila jurnal tidak ada.
+ */
+export async function hapusJurnalModulTx(tx, actor, id) {
+  const j = await repo.lockJurnal(tx, id);
+  if (!j) return false;
+  const group = [j];
+  if (j.mirrorId) {
+    const pair = await repo.lockJurnal(tx, j.mirrorId);
+    if (pair) group.push(pair);
+  }
+  for (const item of group) {
+    if (!['draft', 'diposting'].includes(item.status)) {
+      throw new AppError(`Jurnal ${item.noBukti} sudah dikoreksi, tidak bisa dihapus.`, 409);
+    }
+    if (item.status === 'diposting' && item.ptId && (await repo.isPeriodeTerkunci(item.ptId, item.tanggal, tx))) {
+      throw new AppError(`Periode jurnal ${item.noBukti} sudah dikunci.`, 409);
+    }
+    if (await repo.countLampiran(item.id, tx)) {
+      throw new AppError(`Hapus lampiran jurnal ${item.noBukti} terlebih dahulu.`, 409);
+    }
+  }
+  // Putus tautan mirror dulu supaya FK tidak menghalangi
+  for (const item of group) if (item.mirrorId) await repo.updateJurnal(tx, item.id, { mirrorId: null });
+  for (const item of group) {
+    const before = await snapshot(tx, item);
+    await repo.deleteJurnal(tx, item.id);
+    await recordAuditTx(tx, {
+      userId: actor.userId, ip: actor.ip, action: AuditAction.DELETE, entity: 'jurnal', entityId: item.id,
+      summary: `${item.noBukti} dihapus`, metadata: { sebelum: before },
+    });
+  }
+  return true;
+}
+
+export async function setMirrorTx(tx, aId, bId) {
+  await repo.updateJurnal(tx, aId, { mirrorId: bId });
+  await repo.updateJurnal(tx, bId, { mirrorId: aId });
 }
 
 export async function removeManual(actor, id) {
@@ -397,4 +483,31 @@ export async function balik(actor, id, { tanggal = today(), uraian } = {}) {
     return created;
   });
   return get(reversal.id);
+}
+
+/**
+ * Jurnal otomatis dari modul: langsung diposting bila tidak menyentuh akun
+ * kas/bank. Bila menyentuh kas/bank, disimpan sebagai draft sampai bukti
+ * diunggah ke jurnalnya lalu diposting (POST /jurnal/:id/posting).
+ */
+export async function buatJurnalOtomatis(tx, actor, input) {
+  const akunIds = [...new Set(input.rows.map((r) => r.akunId))];
+  const akuns = await repo.findAkunByIds(akunIds, tx);
+  const adaKasBank = akuns.some((a) => a.isKasBank);
+  return buatJurnal(tx, actor, { ...input, status: adaKasBank ? 'draft' : 'diposting' });
+}
+
+/** Status ringkas jurnal milik dokumen modul: { id, nomorJurnal, status, jumlahLampiran }. */
+export async function ringkasJurnal(ids, tx = db) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const map = new Map();
+  if (!unique.length) return map;
+  const headers = await repo.findJurnalByIds(unique, tx);
+  const { lampiranByJurnal } = await repo.loadChildren(unique, tx);
+  for (const h of headers) {
+    map.set(h.id, {
+      id: h.id, nomorJurnal: h.noBukti, status: h.status, jumlahLampiran: lampiranByJurnal.get(h.id)?.length ?? 0,
+    });
+  }
+  return map;
 }

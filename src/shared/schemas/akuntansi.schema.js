@@ -67,6 +67,8 @@ export const kodePembantu = finance.table('kode_pembantu', {
   kategori: varchar('kategori', { length: 20 }).notNull(),
   proyekId: uuid('proyek_id').references(() => trkProjects.id),
   customerId: uuid('customer_id').references(() => trkCustomers.id),
+  // Kategori antar_proyek: proyek pihak lawan yang diwakili kode pembantu ini
+  proyekLawanId: uuid('proyek_lawan_id').references(() => trkProjects.id),
   aktif: boolean('aktif').notNull().default(true),
   ...timestamps(),
 }, (t) => [index('kode_pembantu_proyek_idx').on(t.proyekId)]);
@@ -120,6 +122,8 @@ export const jurnal = finance.table('jurnal', {
   noBukti: varchar('no_bukti', { length: 40 }).notNull().unique(),
   tanggal: date('tanggal').notNull(),
   uraian: text('uraian').notNull(),
+  // Nomor bukti eksternal (nota, BKK, slip bank)
+  noReferensi: varchar('no_referensi', { length: 60 }),
   proyekId: uuid('proyek_id').references(() => trkProjects.id),
   ptId: uuid('pt_id').references(() => masterPt.id),
   status: varchar('status', { length: 12 }).notNull(),

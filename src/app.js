@@ -26,6 +26,10 @@ import periodeRoutes from './modules/periode/periode.routes.js';
 import jurnalRoutes from './modules/jurnal/jurnal.routes.js';
 import lampiranRoutes from './modules/lampiran/lampiran.routes.js';
 import laporanRoutes from './modules/laporan/laporan.routes.js';
+import hutangRoutes from './modules/hutang/hutang.routes.js';
+import pinjamanRoutes from './modules/pinjaman/pinjaman.routes.js';
+import kontrakRoutes from './modules/kontrak/kontrak.routes.js';
+import shmRoutes from './modules/shm/shm.routes.js';
 import { LAMPIRAN_MAKS_BYTES } from './shared/constants.js';
 
 export async function buildApp({ logger = true } = {}) {
@@ -99,6 +103,10 @@ export async function buildApp({ logger = true } = {}) {
   await app.register(jurnalRoutes, { prefix: '/api/v1/jurnal' });
   await app.register(lampiranRoutes, { prefix: '/api/v1/lampiran' });
   await app.register(laporanRoutes, { prefix: '/api/v1/laporan' });
+  await app.register(hutangRoutes, { prefix: '/api/v1/hutang' });
+  await app.register(pinjamanRoutes, { prefix: '/api/v1/pinjaman' });
+  await app.register(kontrakRoutes, { prefix: '/api/v1/kontrak' });
+  await app.register(shmRoutes, { prefix: '/api/v1/shm' });
 
   app.get('/', async (_request, reply) => reply.code(404).type('text/plain').send(''));
 

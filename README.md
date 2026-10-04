@@ -21,9 +21,10 @@ src/
   plugins/          auth (JWT cookie), redis, validator, swagger
   middleware/       authorize, validate
   modules/          auth, proyek, master-pt, akun, kode-pembantu, saldo-awal,
-                    periode, jurnal, lampiran, laporan
+                    periode, jurnal, lampiran, laporan, hutang, pinjaman,
+                    kontrak, shm
   shared/
-    schemas/        finance (users, audit), track (cermin trk_*), akuntansi
+    schemas/        finance (users, audit), track (cermin trk_*), akuntansi, hutang
     constants.js    nilai pilihan tetap (VARCHAR + validasi aplikasi)
     utils/
 test/

@@ -16,6 +16,7 @@ const body = z.object({
   // FE memakai nama `keterangan` untuk uraian jurnal
   keterangan: z.string().trim().min(1, 'Keterangan jurnal wajib diisi').max(1000),
   proyekId: uuidSchema,
+  noReferensi: z.string().trim().max(60).optional().nullable(),
   status: z.enum(['draft', 'diposting']).default('draft'),
   rows: z.array(row).min(1, 'Jurnal minimal terdiri dari 1 baris').max(200),
 }).transform(({ keterangan, ...rest }) => ({ ...rest, uraian: keterangan }));

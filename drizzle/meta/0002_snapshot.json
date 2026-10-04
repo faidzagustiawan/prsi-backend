@@ -1,0 +1,4032 @@
+{
+  "id": "3a7440f2-363c-47db-b12e-e6d2fb2a8886",
+  "prevId": "da16b404-f2be-40c2-9a95-867865221846",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "finance.akun": {
+      "name": "akun",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "induk_id": {
+          "name": "induk_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kategori": {
+          "name": "kategori",
+          "type": "varchar(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe_saldo": {
+          "name": "tipe_saldo",
+          "type": "varchar(1)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "klasifikasi": {
+          "name": "klasifikasi",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kategori_hutang_piutang": {
+          "name": "kategori_hutang_piutang",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "wajib_kode_pembantu": {
+          "name": "wajib_kode_pembantu",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "wajib_proyek": {
+          "name": "wajib_proyek",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_kas_bank": {
+          "name": "is_kas_bank",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "no_rekening": {
+          "name": "no_rekening",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aktif": {
+          "name": "aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "akun_induk_idx": {
+          "name": "akun_induk_idx",
+          "columns": [
+            {
+              "expression": "induk_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "akun_induk_id_akun_id_fk": {
+          "name": "akun_induk_id_akun_id_fk",
+          "tableFrom": "akun",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "induk_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "akun_kode_unique": {
+          "name": "akun_kode_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kode"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.jurnal": {
+      "name": "jurnal",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "no_bukti": {
+          "name": "no_bukti",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "uraian": {
+          "name": "uraian",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "no_referensi": {
+          "name": "no_referensi",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pt_id": {
+          "name": "pt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(12)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sumber": {
+          "name": "sumber",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ref_type": {
+          "name": "ref_type",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ref_id": {
+          "name": "ref_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mirror_id": {
+          "name": "mirror_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibalik_oleh_id": {
+          "name": "dibalik_oleh_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibuat_oleh": {
+          "name": "dibuat_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diposting_oleh": {
+          "name": "diposting_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diposting_pada": {
+          "name": "diposting_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "jurnal_tanggal_idx": {
+          "name": "jurnal_tanggal_idx",
+          "columns": [
+            {
+              "expression": "tanggal",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jurnal_proyek_idx": {
+          "name": "jurnal_proyek_idx",
+          "columns": [
+            {
+              "expression": "proyek_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jurnal_ref_idx": {
+          "name": "jurnal_ref_idx",
+          "columns": [
+            {
+              "expression": "ref_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "ref_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "jurnal_proyek_id_trk_projects_id_fk": {
+          "name": "jurnal_proyek_id_trk_projects_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_pt_id_master_pt_id_fk": {
+          "name": "jurnal_pt_id_master_pt_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "master_pt",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "pt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_mirror_id_jurnal_id_fk": {
+          "name": "jurnal_mirror_id_jurnal_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "mirror_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_dibalik_oleh_id_jurnal_id_fk": {
+          "name": "jurnal_dibalik_oleh_id_jurnal_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dibalik_oleh_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_dibuat_oleh_users_id_fk": {
+          "name": "jurnal_dibuat_oleh_users_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dibuat_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_diposting_oleh_users_id_fk": {
+          "name": "jurnal_diposting_oleh_users_id_fk",
+          "tableFrom": "jurnal",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "diposting_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "jurnal_no_bukti_unique": {
+          "name": "jurnal_no_bukti_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "no_bukti"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.jurnal_detail": {
+      "name": "jurnal_detail",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "urutan": {
+          "name": "urutan",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_id": {
+          "name": "akun_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode_pembantu_id": {
+          "name": "kode_pembantu_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "debit": {
+          "name": "debit",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "kredit": {
+          "name": "kredit",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        }
+      },
+      "indexes": {
+        "jurnal_detail_jurnal_idx": {
+          "name": "jurnal_detail_jurnal_idx",
+          "columns": [
+            {
+              "expression": "jurnal_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jurnal_detail_akun_idx": {
+          "name": "jurnal_detail_akun_idx",
+          "columns": [
+            {
+              "expression": "akun_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "jurnal_detail_kp_idx": {
+          "name": "jurnal_detail_kp_idx",
+          "columns": [
+            {
+              "expression": "kode_pembantu_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "jurnal_detail_jurnal_id_jurnal_id_fk": {
+          "name": "jurnal_detail_jurnal_id_jurnal_id_fk",
+          "tableFrom": "jurnal_detail",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "jurnal_detail_akun_id_akun_id_fk": {
+          "name": "jurnal_detail_akun_id_akun_id_fk",
+          "tableFrom": "jurnal_detail",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "jurnal_detail_kode_pembantu_id_kode_pembantu_id_fk": {
+          "name": "jurnal_detail_kode_pembantu_id_kode_pembantu_id_fk",
+          "tableFrom": "jurnal_detail",
+          "tableTo": "kode_pembantu",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kode_pembantu_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.kode_pembantu": {
+      "name": "kode_pembantu",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kategori": {
+          "name": "kategori",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proyek_lawan_id": {
+          "name": "proyek_lawan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "aktif": {
+          "name": "aktif",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "kode_pembantu_proyek_idx": {
+          "name": "kode_pembantu_proyek_idx",
+          "columns": [
+            {
+              "expression": "proyek_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kode_pembantu_proyek_id_trk_projects_id_fk": {
+          "name": "kode_pembantu_proyek_id_trk_projects_id_fk",
+          "tableFrom": "kode_pembantu",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kode_pembantu_customer_id_trk_customers_id_fk": {
+          "name": "kode_pembantu_customer_id_trk_customers_id_fk",
+          "tableFrom": "kode_pembantu",
+          "tableTo": "trk_customers",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kode_pembantu_proyek_lawan_id_trk_projects_id_fk": {
+          "name": "kode_pembantu_proyek_lawan_id_trk_projects_id_fk",
+          "tableFrom": "kode_pembantu",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_lawan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kode_pembantu_kode_unique": {
+          "name": "kode_pembantu_kode_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "kode"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.lampiran": {
+      "name": "lampiran",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "entity_type": {
+          "name": "entity_type",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama_file": {
+          "name": "nama_file",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "path": {
+          "name": "path",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mime": {
+          "name": "mime",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ukuran": {
+          "name": "ukuran",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sumber": {
+          "name": "sumber",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'unggah'"
+        },
+        "diunggah_oleh": {
+          "name": "diunggah_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "lampiran_entity_idx": {
+          "name": "lampiran_entity_idx",
+          "columns": [
+            {
+              "expression": "entity_type",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "lampiran_diunggah_oleh_users_id_fk": {
+          "name": "lampiran_diunggah_oleh_users_id_fk",
+          "tableFrom": "lampiran",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "diunggah_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.master_pt": {
+      "name": "master_pt",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_company_id": {
+          "name": "track_company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama_pt": {
+          "name": "nama_pt",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "singkatan": {
+          "name": "singkatan",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama_direktur": {
+          "name": "nama_direktur",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ttl": {
+          "name": "ttl",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pekerjaan": {
+          "name": "pekerjaan",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alamat": {
+          "name": "alamat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_ktp": {
+          "name": "no_ktp",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "master_pt_track_company_id_trk_companies_id_fk": {
+          "name": "master_pt_track_company_id_trk_companies_id_fk",
+          "tableFrom": "master_pt",
+          "tableTo": "trk_companies",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "track_company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "master_pt_proyek_id_trk_projects_id_fk": {
+          "name": "master_pt_proyek_id_trk_projects_id_fk",
+          "tableFrom": "master_pt",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "master_pt_proyek_id_unique": {
+          "name": "master_pt_proyek_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "proyek_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.penomoran": {
+      "name": "penomoran",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "jenis": {
+          "name": "jenis",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scope": {
+          "name": "scope",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
+        },
+        "tahun": {
+          "name": "tahun",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bulan": {
+          "name": "bulan",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "nomor_terakhir": {
+          "name": "nomor_terakhir",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "penomoran_uq": {
+          "name": "penomoran_uq",
+          "columns": [
+            {
+              "expression": "jenis",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "scope",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tahun",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "bulan",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.periode": {
+      "name": "periode",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "pt_id": {
+          "name": "pt_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tahun": {
+          "name": "tahun",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bulan": {
+          "name": "bulan",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'terbuka'"
+        },
+        "ditutup_oleh": {
+          "name": "ditutup_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ditutup_pada": {
+          "name": "ditutup_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "periode_pt_bulan_uq": {
+          "name": "periode_pt_bulan_uq",
+          "columns": [
+            {
+              "expression": "pt_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "tahun",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "bulan",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "periode_pt_id_master_pt_id_fk": {
+          "name": "periode_pt_id_master_pt_id_fk",
+          "tableFrom": "periode",
+          "tableTo": "master_pt",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "pt_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "periode_ditutup_oleh_users_id_fk": {
+          "name": "periode_ditutup_oleh_users_id_fk",
+          "tableFrom": "periode",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "ditutup_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.saldo_awal": {
+      "name": "saldo_awal",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "periode_id": {
+          "name": "periode_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_id": {
+          "name": "akun_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode_pembantu_id": {
+          "name": "kode_pembantu_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "debit": {
+          "name": "debit",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "kredit": {
+          "name": "kredit",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'0'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "saldo_awal_periode_idx": {
+          "name": "saldo_awal_periode_idx",
+          "columns": [
+            {
+              "expression": "periode_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "saldo_awal_periode_id_saldo_awal_periode_id_fk": {
+          "name": "saldo_awal_periode_id_saldo_awal_periode_id_fk",
+          "tableFrom": "saldo_awal",
+          "tableTo": "saldo_awal_periode",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "periode_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "saldo_awal_akun_id_akun_id_fk": {
+          "name": "saldo_awal_akun_id_akun_id_fk",
+          "tableFrom": "saldo_awal",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "saldo_awal_kode_pembantu_id_kode_pembantu_id_fk": {
+          "name": "saldo_awal_kode_pembantu_id_kode_pembantu_id_fk",
+          "tableFrom": "saldo_awal",
+          "tableTo": "kode_pembantu",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kode_pembantu_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.saldo_awal_periode": {
+      "name": "saldo_awal_periode",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_mulai": {
+          "name": "tanggal_mulai",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'terbuka'"
+        },
+        "dikunci_oleh": {
+          "name": "dikunci_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dikunci_pada": {
+          "name": "dikunci_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "saldo_awal_periode_proyek_id_trk_projects_id_fk": {
+          "name": "saldo_awal_periode_proyek_id_trk_projects_id_fk",
+          "tableFrom": "saldo_awal_periode",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "saldo_awal_periode_dikunci_oleh_users_id_fk": {
+          "name": "saldo_awal_periode_dikunci_oleh_users_id_fk",
+          "tableFrom": "saldo_awal_periode",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dikunci_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "saldo_awal_periode_proyek_id_unique": {
+          "name": "saldo_awal_periode_proyek_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "proyek_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.audit_logs": {
+      "name": "audit_logs",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "action": {
+          "name": "action",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity": {
+          "name": "entity",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_id": {
+          "name": "entity_id",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "field": {
+          "name": "field",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nilai_lama": {
+          "name": "nilai_lama",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nilai_baru": {
+          "name": "nilai_baru",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "summary": {
+          "name": "summary",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "audit_entity_idx": {
+          "name": "audit_entity_idx",
+          "columns": [
+            {
+              "expression": "entity",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "audit_company_created_idx": {
+          "name": "audit_company_created_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "audit_logs_user_id_users_id_fk": {
+          "name": "audit_logs_user_id_users_id_fk",
+          "tableFrom": "audit_logs",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.refresh_tokens": {
+      "name": "refresh_tokens",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "rt_user_idx": {
+          "name": "rt_user_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "refresh_tokens_user_id_users_id_fk": {
+          "name": "refresh_tokens_user_id_users_id_fk",
+          "tableFrom": "refresh_tokens",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "refresh_tokens_token_hash_unique": {
+          "name": "refresh_tokens_token_hash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token_hash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.users": {
+      "name": "users",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "last_login_at": {
+          "name": "last_login_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "users_email_unique": {
+          "name": "users_email_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "email"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.adendum_kontrak": {
+      "name": "adendum_kontrak",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kontrak_id": {
+          "name": "kontrak_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "no_adendum": {
+          "name": "no_adendum",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_lama": {
+          "name": "nilai_lama",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_baru": {
+          "name": "nilai_baru",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "alasan": {
+          "name": "alasan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibuat_oleh": {
+          "name": "dibuat_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "adendum_kontrak_idx": {
+          "name": "adendum_kontrak_idx",
+          "columns": [
+            {
+              "expression": "kontrak_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "adendum_kontrak_kontrak_id_kontrak_kontraktor_id_fk": {
+          "name": "adendum_kontrak_kontrak_id_kontrak_kontraktor_id_fk",
+          "tableFrom": "adendum_kontrak",
+          "tableTo": "kontrak_kontraktor",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kontrak_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "adendum_kontrak_jurnal_id_jurnal_id_fk": {
+          "name": "adendum_kontrak_jurnal_id_jurnal_id_fk",
+          "tableFrom": "adendum_kontrak",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "adendum_kontrak_dibuat_oleh_users_id_fk": {
+          "name": "adendum_kontrak_dibuat_oleh_users_id_fk",
+          "tableFrom": "adendum_kontrak",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dibuat_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.dokumen_legal_kavling": {
+      "name": "dokumen_legal_kavling",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "unit_id": {
+          "name": "unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "no_shm": {
+          "name": "no_shm",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_shm": {
+          "name": "status_shm",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status_shm_kustom": {
+          "name": "status_shm_kustom",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "lokasi": {
+          "name": "lokasi",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pinjaman_id": {
+          "name": "pinjaman_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_pbg": {
+          "name": "no_pbg",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_pbg": {
+          "name": "status_pbg",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'belum_diajukan'"
+        },
+        "status_pbg_kustom": {
+          "name": "status_pbg_kustom",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "dokumen_legal_kavling_unit_id_trk_units_id_fk": {
+          "name": "dokumen_legal_kavling_unit_id_trk_units_id_fk",
+          "tableFrom": "dokumen_legal_kavling",
+          "tableTo": "trk_units",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "dokumen_legal_kavling_pinjaman_id_pinjaman_id_fk": {
+          "name": "dokumen_legal_kavling_pinjaman_id_pinjaman_id_fk",
+          "tableFrom": "dokumen_legal_kavling",
+          "tableTo": "pinjaman",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "pinjaman_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "dokumen_legal_kavling_unit_id_unique": {
+          "name": "dokumen_legal_kavling_unit_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "unit_id"
+          ]
+        },
+        "dokumen_legal_kavling_no_shm_unique": {
+          "name": "dokumen_legal_kavling_no_shm_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "no_shm"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.kontrak_kontraktor": {
+      "name": "kontrak_kontraktor",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "no_spk": {
+          "name": "no_spk",
+          "type": "varchar(40)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "unit_id": {
+          "name": "unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe": {
+          "name": "tipe",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_spk": {
+          "name": "tanggal_spk",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode_pembantu_id": {
+          "name": "kode_pembantu_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_rab": {
+          "name": "nilai_rab",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nilai_kontrak": {
+          "name": "nilai_kontrak",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "akun_persediaan_id": {
+          "name": "akun_persediaan_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_hutang_id": {
+          "name": "akun_hutang_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'aktif'"
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jurnal_batal_id": {
+          "name": "jurnal_batal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibatalkan_pada": {
+          "name": "dibatalkan_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "kontrak_proyek_idx": {
+          "name": "kontrak_proyek_idx",
+          "columns": [
+            {
+              "expression": "proyek_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "kontrak_kontraktor_proyek_id_trk_projects_id_fk": {
+          "name": "kontrak_kontraktor_proyek_id_trk_projects_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_unit_id_trk_units_id_fk": {
+          "name": "kontrak_kontraktor_unit_id_trk_units_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "trk_units",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_kode_pembantu_id_kode_pembantu_id_fk": {
+          "name": "kontrak_kontraktor_kode_pembantu_id_kode_pembantu_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "kode_pembantu",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kode_pembantu_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_akun_persediaan_id_akun_id_fk": {
+          "name": "kontrak_kontraktor_akun_persediaan_id_akun_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_persediaan_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_akun_hutang_id_akun_id_fk": {
+          "name": "kontrak_kontraktor_akun_hutang_id_akun_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_hutang_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_jurnal_id_jurnal_id_fk": {
+          "name": "kontrak_kontraktor_jurnal_id_jurnal_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "kontrak_kontraktor_jurnal_batal_id_jurnal_id_fk": {
+          "name": "kontrak_kontraktor_jurnal_batal_id_jurnal_id_fk",
+          "tableFrom": "kontrak_kontraktor",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_batal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "kontrak_kontraktor_no_spk_unique": {
+          "name": "kontrak_kontraktor_no_spk_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "no_spk"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.pembayaran_kontrak": {
+      "name": "pembayaran_kontrak",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "kontrak_id": {
+          "name": "kontrak_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal": {
+          "name": "nominal",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_kas_id": {
+          "name": "akun_kas_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "no_bukti": {
+          "name": "no_bukti",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibuat_oleh": {
+          "name": "dibuat_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pembayaran_kontrak_idx": {
+          "name": "pembayaran_kontrak_idx",
+          "columns": [
+            {
+              "expression": "kontrak_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pembayaran_kontrak_kontrak_id_kontrak_kontraktor_id_fk": {
+          "name": "pembayaran_kontrak_kontrak_id_kontrak_kontraktor_id_fk",
+          "tableFrom": "pembayaran_kontrak",
+          "tableTo": "kontrak_kontraktor",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kontrak_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pembayaran_kontrak_akun_kas_id_akun_id_fk": {
+          "name": "pembayaran_kontrak_akun_kas_id_akun_id_fk",
+          "tableFrom": "pembayaran_kontrak",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_kas_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pembayaran_kontrak_jurnal_id_jurnal_id_fk": {
+          "name": "pembayaran_kontrak_jurnal_id_jurnal_id_fk",
+          "tableFrom": "pembayaran_kontrak",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pembayaran_kontrak_dibuat_oleh_users_id_fk": {
+          "name": "pembayaran_kontrak_dibuat_oleh_users_id_fk",
+          "tableFrom": "pembayaran_kontrak",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dibuat_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.pinjaman": {
+      "name": "pinjaman",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "proyek_id": {
+          "name": "proyek_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode_pembantu_id": {
+          "name": "kode_pembantu_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "no_akad": {
+          "name": "no_akad",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pola": {
+          "name": "pola",
+          "type": "varchar(15)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal_acuan_bunga": {
+          "name": "tanggal_acuan_bunga",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jatuh_tempo_pokok": {
+          "name": "jatuh_tempo_pokok",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_hutang_id": {
+          "name": "akun_hutang_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "akun_beban_bunga_id": {
+          "name": "akun_beban_bunga_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pinjaman_proyek_idx": {
+          "name": "pinjaman_proyek_idx",
+          "columns": [
+            {
+              "expression": "proyek_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pinjaman_proyek_id_trk_projects_id_fk": {
+          "name": "pinjaman_proyek_id_trk_projects_id_fk",
+          "tableFrom": "pinjaman",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "proyek_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_kode_pembantu_id_kode_pembantu_id_fk": {
+          "name": "pinjaman_kode_pembantu_id_kode_pembantu_id_fk",
+          "tableFrom": "pinjaman",
+          "tableTo": "kode_pembantu",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "kode_pembantu_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_akun_hutang_id_akun_id_fk": {
+          "name": "pinjaman_akun_hutang_id_akun_id_fk",
+          "tableFrom": "pinjaman",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_hutang_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_akun_beban_bunga_id_akun_id_fk": {
+          "name": "pinjaman_akun_beban_bunga_id_akun_id_fk",
+          "tableFrom": "pinjaman",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_beban_bunga_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.pinjaman_transaksi": {
+      "name": "pinjaman_transaksi",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "pinjaman_id": {
+          "name": "pinjaman_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis": {
+          "name": "jenis",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal": {
+          "name": "nominal",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal_pokok": {
+          "name": "nominal_pokok",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nominal_bunga": {
+          "name": "nominal_bunga",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "periode_bunga": {
+          "name": "periode_bunga",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_bukti": {
+          "name": "no_bukti",
+          "type": "varchar(60)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "akun_kas_id": {
+          "name": "akun_kas_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_rincian": {
+          "name": "status_rincian",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'lengkap'"
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dibuat_oleh": {
+          "name": "dibuat_oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "pinjaman_transaksi_pinjaman_idx": {
+          "name": "pinjaman_transaksi_pinjaman_idx",
+          "columns": [
+            {
+              "expression": "pinjaman_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "pinjaman_transaksi_pinjaman_id_pinjaman_id_fk": {
+          "name": "pinjaman_transaksi_pinjaman_id_pinjaman_id_fk",
+          "tableFrom": "pinjaman_transaksi",
+          "tableTo": "pinjaman",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "pinjaman_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_transaksi_akun_kas_id_akun_id_fk": {
+          "name": "pinjaman_transaksi_akun_kas_id_akun_id_fk",
+          "tableFrom": "pinjaman_transaksi",
+          "tableTo": "akun",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "akun_kas_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_transaksi_jurnal_id_jurnal_id_fk": {
+          "name": "pinjaman_transaksi_jurnal_id_jurnal_id_fk",
+          "tableFrom": "pinjaman_transaksi",
+          "tableTo": "jurnal",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "jurnal_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "pinjaman_transaksi_dibuat_oleh_users_id_fk": {
+          "name": "pinjaman_transaksi_dibuat_oleh_users_id_fk",
+          "tableFrom": "pinjaman_transaksi",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dibuat_oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.shm_riwayat": {
+      "name": "shm_riwayat",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "dokumen_id": {
+          "name": "dokumen_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "dari_status": {
+          "name": "dari_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ke_status": {
+          "name": "ke_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "lokasi": {
+          "name": "lokasi",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "keterangan": {
+          "name": "keterangan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "oleh": {
+          "name": "oleh",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "shm_riwayat_dokumen_idx": {
+          "name": "shm_riwayat_dokumen_idx",
+          "columns": [
+            {
+              "expression": "dokumen_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shm_riwayat_dokumen_id_dokumen_legal_kavling_id_fk": {
+          "name": "shm_riwayat_dokumen_id_dokumen_legal_kavling_id_fk",
+          "tableFrom": "shm_riwayat",
+          "tableTo": "dokumen_legal_kavling",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "dokumen_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "shm_riwayat_oleh_users_id_fk": {
+          "name": "shm_riwayat_oleh_users_id_fk",
+          "tableFrom": "shm_riwayat",
+          "tableTo": "users",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "oleh"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.status_pembayaran_si": {
+      "name": "status_pembayaran_si",
+      "schema": "finance",
+      "columns": {
+        "payment_id": {
+          "name": "payment_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "status_proses": {
+          "name": "status_proses",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jurnal_id": {
+          "name": "jurnal_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alasan": {
+          "name": "alasan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "status_pembayaran_si_payment_id_trk_payments_id_fk": {
+          "name": "status_pembayaran_si_payment_id_trk_payments_id_fk",
+          "tableFrom": "status_pembayaran_si",
+          "tableTo": "trk_payments",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "payment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.sync_cursor": {
+      "name": "sync_cursor",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "varchar(20)",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cursor_seq": {
+          "name": "cursor_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.sync_error": {
+      "name": "sync_error",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "seq": {
+          "name": "seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "entity": {
+          "name": "entity",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "entity_track_id": {
+          "name": "entity_track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alasan": {
+          "name": "alasan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "percobaan": {
+          "name": "percobaan",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "resolved_at": {
+          "name": "resolved_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.sync_log": {
+      "name": "sync_log",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "entitas": {
+          "name": "entitas",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "arah": {
+          "name": "arah",
+          "type": "varchar(15)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "mulai": {
+          "name": "mulai",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "selesai": {
+          "name": "selesai",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "jml_baru": {
+          "name": "jml_baru",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "jml_ubah": {
+          "name": "jml_ubah",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "jml_gagal": {
+          "name": "jml_gagal",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pesan": {
+          "name": "pesan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_assignments": {
+      "name": "trk_assignments",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "unit_id": {
+          "name": "unit_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "customer_id": {
+          "name": "customer_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe_pembayaran": {
+          "name": "tipe_pembayaran",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "harga": {
+          "name": "harga",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "uang_muka": {
+          "name": "uang_muka",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trk_assignments_unit_idx": {
+          "name": "trk_assignments_unit_idx",
+          "columns": [
+            {
+              "expression": "unit_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "trk_assignments_customer_idx": {
+          "name": "trk_assignments_customer_idx",
+          "columns": [
+            {
+              "expression": "customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trk_assignments_unit_id_trk_units_id_fk": {
+          "name": "trk_assignments_unit_id_trk_units_id_fk",
+          "tableFrom": "trk_assignments",
+          "tableTo": "trk_units",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "unit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trk_assignments_customer_id_trk_customers_id_fk": {
+          "name": "trk_assignments_customer_id_trk_customers_id_fk",
+          "tableFrom": "trk_assignments",
+          "tableTo": "trk_customers",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "customer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_assignments_track_id_unique": {
+          "name": "trk_assignments_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_clusters": {
+      "name": "trk_clusters",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "trk_clusters_project_idx": {
+          "name": "trk_clusters_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trk_clusters_project_id_trk_projects_id_fk": {
+          "name": "trk_clusters_project_id_trk_projects_id_fk",
+          "tableFrom": "trk_clusters",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_clusters_track_id_unique": {
+          "name": "trk_clusters_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_companies": {
+      "name": "trk_companies",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alamat": {
+          "name": "alamat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_companies_track_id_unique": {
+          "name": "trk_companies_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_customers": {
+      "name": "trk_customers",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_hp": {
+          "name": "no_hp",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tempat_lahir": {
+          "name": "tempat_lahir",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tanggal_lahir": {
+          "name": "tanggal_lahir",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pekerjaan": {
+          "name": "pekerjaan",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alamat": {
+          "name": "alamat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "no_ktp": {
+          "name": "no_ktp",
+          "type": "varchar(16)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_customers_track_id_unique": {
+          "name": "trk_customers_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_payments": {
+      "name": "trk_payments",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "assignment_id": {
+          "name": "assignment_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tanggal": {
+          "name": "tanggal",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nominal": {
+          "name": "nominal",
+          "type": "numeric(18, 2)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "jenis": {
+          "name": "jenis",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status_verifikasi": {
+          "name": "status_verifikasi",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diverifikasi_oleh": {
+          "name": "diverifikasi_oleh",
+          "type": "varchar(150)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "diverifikasi_pada": {
+          "name": "diverifikasi_pada",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "rekening_tujuan": {
+          "name": "rekening_tujuan",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bukti_url": {
+          "name": "bukti_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "catatan": {
+          "name": "catatan",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_auto_inject": {
+          "name": "is_auto_inject",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "source_created_at": {
+          "name": "source_created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trk_payments_assignment_idx": {
+          "name": "trk_payments_assignment_idx",
+          "columns": [
+            {
+              "expression": "assignment_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trk_payments_assignment_id_trk_assignments_id_fk": {
+          "name": "trk_payments_assignment_id_trk_assignments_id_fk",
+          "tableFrom": "trk_payments",
+          "tableTo": "trk_assignments",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "assignment_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_payments_track_id_unique": {
+          "name": "trk_payments_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_projects": {
+      "name": "trk_projects",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "company_id": {
+          "name": "company_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nama": {
+          "name": "nama",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trk_projects_company_idx": {
+          "name": "trk_projects_company_idx",
+          "columns": [
+            {
+              "expression": "company_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trk_projects_company_id_trk_companies_id_fk": {
+          "name": "trk_projects_company_id_trk_companies_id_fk",
+          "tableFrom": "trk_projects",
+          "tableTo": "trk_companies",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "company_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_projects_track_id_unique": {
+          "name": "trk_projects_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "finance.trk_units": {
+      "name": "trk_units",
+      "schema": "finance",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "track_id": {
+          "name": "track_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "row_version": {
+          "name": "row_version",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "track_seq": {
+          "name": "track_seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_deleted": {
+          "name": "is_deleted",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "raw": {
+          "name": "raw",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "synced_at": {
+          "name": "synced_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "cluster_id": {
+          "name": "cluster_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "project_id": {
+          "name": "project_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kode": {
+          "name": "kode",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tipe": {
+          "name": "tipe",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "luas_tanah": {
+          "name": "luas_tanah",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "luas_bangunan": {
+          "name": "luas_bangunan",
+          "type": "numeric(10, 2)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "trk_units_project_idx": {
+          "name": "trk_units_project_idx",
+          "columns": [
+            {
+              "expression": "project_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "trk_units_cluster_id_trk_clusters_id_fk": {
+          "name": "trk_units_cluster_id_trk_clusters_id_fk",
+          "tableFrom": "trk_units",
+          "tableTo": "trk_clusters",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "cluster_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "trk_units_project_id_trk_projects_id_fk": {
+          "name": "trk_units_project_id_trk_projects_id_fk",
+          "tableFrom": "trk_units",
+          "tableTo": "trk_projects",
+          "schemaTo": "finance",
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "trk_units_track_id_unique": {
+          "name": "trk_units_track_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "track_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {
+    "finance": "finance"
+  },
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

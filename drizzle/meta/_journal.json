@@ -15,6 +15,13 @@
       "when": 1791094538770,
       "tag": "0001_fondasi_keuangan",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791095508984,
+      "tag": "0002_modul_hutang",
+      "breakpoints": true
     }
   ]
 }

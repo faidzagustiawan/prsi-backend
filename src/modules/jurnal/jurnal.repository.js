@@ -146,3 +146,8 @@ export async function lockJurnal(tx, id) {
   const [row] = await tx.select().from(jurnal).where(eq(jurnal.id, id)).for('update').limit(1);
   return row ?? null;
 }
+
+export async function findJurnalByIds(ids, tx = db) {
+  if (!ids.length) return [];
+  return tx.select().from(jurnal).where(inArray(jurnal.id, ids));
+}
