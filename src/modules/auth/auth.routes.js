@@ -7,10 +7,9 @@ const userSchema = {
   type: 'object',
   properties: {
     id: { type: 'string', format: 'uuid' },
-    nama: { type: 'string' },
+    name: { type: 'string' },
     email: { type: 'string' },
     role: { type: 'string' },
-    companyId: { type: ['string', 'null'] },
   },
 };
 

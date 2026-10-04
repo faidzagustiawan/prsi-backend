@@ -9,7 +9,7 @@ import { sql } from 'drizzle-orm';
  * berjalan. Ini jaring terakhir di atas grant database: konfigurasi yang salah
  * berhenti di sini, bukan berakhir menyentuh data Track.
  *
- * Lihat docs/DatabaseIsolation.md
+ * Lihat docs/RancanganSistem.md
  */
 export async function assertIsolatedRole(database, { allowUnsafe = false, label = 'DATABASE_URL' } = {}) {
   const [identity] = await database.execute(sql`

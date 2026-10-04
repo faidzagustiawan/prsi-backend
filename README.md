@@ -1,49 +1,48 @@
 # PodorukunSI - Finance Backend
 
-API Sistem Informasi Keuangan Podorukun. Berjalan berdampingan dengan PodorukunTrack dan memakai database yang sama, tapi di schema terpisah `finance`.
+API Sistem Informasi Keuangan Podorukun. Berjalan di VPS dan database sendiri, terpisah dari PodorukunTrack. Data Track masuk lewat API Track ke tabel cermin `trk_*`; Track tidak punya akses ke SI.
 
-**Stack:** Node.js, Fastify 5, Drizzle ORM, PostgreSQL (Neon), Redis, Zod, Vitest.
+**Stack:** Node.js, Fastify 5, Drizzle ORM, PostgreSQL, Redis, Zod, Vitest.
 
-> **Baca [docs/DatabaseIsolation.md](docs/DatabaseIsolation.md) sebelum menyentuh database.**
-> SI tidak boleh memengaruhi PodorukunTrack sama sekali. Isolasinya ditegakkan oleh hak akses database, guard migrasi, dan pemeriksaan saat server start.
+> Baca [docs/RancanganSistem.md](docs/RancanganSistem.md) untuk arsitektur dan aturan konsistensi data dengan Track, dan [docs/API.md](docs/API.md) untuk kontrak API frontend.
 
 ## Struktur
 
 ```
-database/setup/     SQL sekali jalan: role, schema finance, kontrak baca Track
-docs/               dokumentasi isolasi database
+database/setup/     SQL sekali jalan: role si_migrator / si_app / si_report, schema finance
+docs/               rancangan sistem, kontrak API
 drizzle/            migrasi hasil drizzle-kit (schema finance saja)
 scripts/
-  check-migrations.js   menolak migrasi yang menyentuh schema Track
+  check-migrations.js   guard migrasi
   create-user.js        membuat user SI
+  seed-dev.js           data contoh lokal
 src/
-  config/           env, koneksi DB, dbGuard (cek isolasi saat start)
-  plugins/          auth (JWT), redis, validator, swagger
+  config/           env, koneksi DB, dbGuard (cek hak role saat start)
+  plugins/          auth (JWT cookie), redis, validator, swagger
   middleware/       authorize, validate
-  modules/
-    auth/           login, refresh, logout, me (user SI sendiri)
-    track/          satu-satunya pintu baca data Track (finance.track_*)
+  modules/          auth, proyek, master-pt, akun, kode-pembantu, saldo-awal,
+                    periode, jurnal, lampiran, laporan
   shared/
-    schemas/        finance.schema.js
+    schemas/        finance (users, audit), track (cermin trk_*), akuntansi
+    constants.js    nilai pilihan tetap (VARCHAR + validasi aplikasi)
     utils/
 test/
 ```
 
-Pola modul: `*.routes.js` → `*.controller.js` → `*.service.js` → `*.repository.js`, ditambah `*.schema.js` (zod).
+Semua jurnal, dari modul mana pun, dibuat lewat `buatJurnal()` di `modules/jurnal/jurnal.service.js`.
 
 ## Menjalankan (development)
 
-API berjalan di port **3100**, supaya tidak bentrok dengan Track di 3000.
+API berjalan di port **3100**.
 
-1. Setup database sekali jalan di **Neon branch**. Langkahnya ada di [docs/DatabaseIsolation.md](docs/DatabaseIsolation.md) bagian 4.
+1. Jalankan `database/setup/001_roles_and_schema.sql` sekali sebagai owner database.
 2. Konfigurasi dan jalankan:
    ```bash
    cp .env.example .env    # isi DATABASE_URL (si_app), SI_MIGRATOR_DATABASE_URL, secret baru
    npm install
-   npm run db:generate     # membuat migrasi dari finance.schema.js
-   # Migrasi pertama: ubah CREATE SCHEMA "finance" menjadi CREATE SCHEMA IF NOT EXISTS "finance"
    npm run db:migrate      # check-migrations lalu drizzle-kit migrate
-   SI_NEW_USER_PASSWORD='...' npm run user:create -- --email admin@contoh.com --nama "Admin" --role super_admin
+   npm run seed:dev        # data contoh: proyek, PT, COA, kode pembantu
+   SI_NEW_USER_PASSWORD='...' npm run user:create -- --email keuangan@contoh.com --nama "Keuangan" --role keuangan
    npm run dev
    ```
 
@@ -54,16 +53,17 @@ Swagger UI tersedia di `http://localhost:3100/docs`, hanya bila `NODE_ENV=develo
 | Perintah | Fungsi |
 |---|---|
 | `npm run dev` | Server dengan nodemon |
-| `npm test` | Unit test, ditambah contract test `finance.track_*` bila `CONTRACT_DATABASE_URL` di-set |
+| `npm test` | Unit test |
 | `npm run lint` | ESLint |
-| `npm run db:generate` | Membuat migrasi dari `finance.schema.js` |
+| `npm run db:generate` | Membuat migrasi dari `src/shared/schemas/*.schema.js` |
 | `npm run db:check` | Guard migrasi |
 | `npm run db:migrate` | Guard, lalu migrasi |
+| `npm run seed:dev` | Data contoh lokal |
 | `npm run user:create` | Membuat user SI |
 
 ## Pengaman yang aktif
 
-- Server menolak start kalau role DB bisa mengakses tabel Track (`src/config/dbGuard.js`).
-- `db:migrate` menolak migrasi yang menyentuh `public`, membuat view/trigger, berisi `DROP ... CASCADE`, GRANT, membuat schema selain `finance`, dan sejenisnya.
-- Token SI memakai secret, audience, dan nama cookie sendiri. Token Track ditolak.
+- Server menolak start kalau role DB runtime adalah superuser atau bisa mengakses schema lain (`src/config/dbGuard.js`).
+- `db:migrate` menolak migrasi di luar schema `finance`, view/trigger, `DROP ... CASCADE`, GRANT, dan sejenisnya.
+- Token SI memakai secret, audience, dan nama cookie sendiri.
 - Key Redis SI selalu berprefix `si:`.

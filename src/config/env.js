@@ -1,5 +1,6 @@
 // src/config/env.js
 import dotenv from 'dotenv';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -37,6 +38,8 @@ export const env = {
     ? process.env.FRONTEND_URL.split(',')
     : ['http://localhost:5174'],
   apiUrl: process.env.API_URL || 'http://localhost:3100',
+  // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),
   allowUnsafeDbRole:
     process.env.NODE_ENV === 'development' && process.env.ALLOW_UNSAFE_DB_ROLE === 'true',
 };
