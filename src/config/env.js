@@ -31,6 +31,10 @@ export const env = {
   host: process.env.HOST || '127.0.0.1',
   databaseUrl: process.env.DATABASE_URL,
   reportDatabaseUrl: process.env.REPORT_DATABASE_URL || process.env.DATABASE_URL,
+  // Session pooler / koneksi langsung, untuk advisory lock worker. Kosong = DATABASE_URL
+  // (aman hanya bila DATABASE_URL bukan transaction pooler).
+  sessionDatabaseUrl: process.env.SESSION_DATABASE_URL || process.env.DATABASE_URL,
+  dbPoolMax: parseInt(process.env.DB_POOL_MAX, 10) || 5,
   jwtSecret: process.env.JWT_SECRET,
   cookieSecret: process.env.COOKIE_SECRET,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
