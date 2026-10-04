@@ -13,13 +13,15 @@ const validationMessage = (err) => {
 
 /** Pesan error ramah pengguna (Bahasa Indonesia), tanpa membocorkan detail internal. */
 export const globalErrorHandler = (error, request, reply) => {
-  request.server.log.error(error);
+  // Galat bisnis (AppError 4xx) cukup level warn; sisanya error
+  if (error.statusCode && error.statusCode < 500) request.server.log.warn(error.message);
+  else request.server.log.error(error);
 
   let statusCode = error.statusCode || 500;
   let message = !error.statusCode
     ? 'Terjadi kesalahan pada server.'
     : (error.message || 'Terjadi kesalahan.');
-  let errors = [];
+  let errors = Array.isArray(error.errors) ? error.errors : [];
 
   if (error.validation) {
     statusCode = 400;

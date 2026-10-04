@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1790867489757,
+      "tag": "0000_jittery_tattoo",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791094538770,
+      "tag": "0001_fondasi_keuangan",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1791095508984,
+      "tag": "0002_modul_hutang",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1791096231808,
+      "tag": "0003_legal_piutang",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1791097051848,
+      "tag": "0004_sync_gap",
+      "breakpoints": true
+    }
+  ]
+}

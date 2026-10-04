@@ -38,7 +38,6 @@ export const loginHandler = async (request, reply) => {
   await recordAudit({
     request,
     userId: tokens.user.id,
-    companyId: tokens.user.companyId,
     action: AuditAction.LOGIN,
     entity: 'user',
     entityId: tokens.user.id,

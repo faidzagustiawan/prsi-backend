@@ -4,6 +4,7 @@ import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyMultipart from '@fastify/multipart';
 import { sql } from 'drizzle-orm';
 
 import { env } from './config/env.js';
@@ -16,7 +17,26 @@ import { globalErrorHandler } from './shared/utils/errorHandler.js';
 import { getRedisClient } from './shared/utils/redis.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
-import trackRoutes from './modules/track/track.routes.js';
+import proyekRoutes from './modules/proyek/proyek.routes.js';
+import masterPtRoutes from './modules/master-pt/master-pt.routes.js';
+import akunRoutes from './modules/akun/akun.routes.js';
+import kodePembantuRoutes from './modules/kode-pembantu/kode-pembantu.routes.js';
+import saldoAwalRoutes from './modules/saldo-awal/saldo-awal.routes.js';
+import periodeRoutes from './modules/periode/periode.routes.js';
+import jurnalRoutes from './modules/jurnal/jurnal.routes.js';
+import lampiranRoutes from './modules/lampiran/lampiran.routes.js';
+import laporanRoutes from './modules/laporan/laporan.routes.js';
+import hutangRoutes from './modules/hutang/hutang.routes.js';
+import pinjamanRoutes from './modules/pinjaman/pinjaman.routes.js';
+import kontrakRoutes from './modules/kontrak/kontrak.routes.js';
+import shmRoutes from './modules/shm/shm.routes.js';
+import akunSistemRoutes from './modules/akun-sistem/akun-sistem.routes.js';
+import pasalRoutes from './modules/legal/pasal.routes.js';
+import templateRoutes from './modules/legal/template.routes.js';
+import dokumenRoutes from './modules/legal/dokumen.routes.js';
+import { piutangRoutes, pembayaranTrackRoutes } from './modules/penjualan/piutang.routes.js';
+import sinkronRoutes from './modules/sinkron/sinkron.routes.js';
+import { LAMPIRAN_MAKS_BYTES } from './shared/constants.js';
 
 export async function buildApp({ logger = true } = {}) {
   const app = Fastify({
@@ -61,6 +81,9 @@ export async function buildApp({ logger = true } = {}) {
     noSniff: true,
   });
 
+  // Satu berkas per request; ukuran dibatasi lagi per jenis lampiran di service
+  await app.register(fastifyMultipart, { limits: { fileSize: LAMPIRAN_MAKS_BYTES, files: 1, fields: 5 } });
+
   await app.register(authPlugin);
   await app.register(validatorPlugin);
   // Swagger UI hanya aktif bila NODE_ENV eksplisit 'development'
@@ -77,7 +100,26 @@ export async function buildApp({ logger = true } = {}) {
   app.setErrorHandler(globalErrorHandler);
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
-  await app.register(trackRoutes, { prefix: '/api/v1/track' });
+  await app.register(proyekRoutes, { prefix: '/api/v1/proyek' });
+  await app.register(masterPtRoutes, { prefix: '/api/v1/master-pt' });
+  await app.register(akunRoutes, { prefix: '/api/v1/akun' });
+  await app.register(kodePembantuRoutes, { prefix: '/api/v1/kode-pembantu' });
+  await app.register(saldoAwalRoutes, { prefix: '/api/v1/saldo-awal' });
+  await app.register(periodeRoutes, { prefix: '/api/v1/periode' });
+  await app.register(jurnalRoutes, { prefix: '/api/v1/jurnal' });
+  await app.register(lampiranRoutes, { prefix: '/api/v1/lampiran' });
+  await app.register(laporanRoutes, { prefix: '/api/v1/laporan' });
+  await app.register(hutangRoutes, { prefix: '/api/v1/hutang' });
+  await app.register(pinjamanRoutes, { prefix: '/api/v1/pinjaman' });
+  await app.register(kontrakRoutes, { prefix: '/api/v1/kontrak' });
+  await app.register(shmRoutes, { prefix: '/api/v1/shm' });
+  await app.register(akunSistemRoutes, { prefix: '/api/v1/akun-sistem' });
+  await app.register(pasalRoutes, { prefix: '/api/v1/pasal' });
+  await app.register(templateRoutes, { prefix: '/api/v1/template-dokumen' });
+  await app.register(dokumenRoutes, { prefix: '/api/v1/dokumen' });
+  await app.register(piutangRoutes, { prefix: '/api/v1/piutang' });
+  await app.register(pembayaranTrackRoutes, { prefix: '/api/v1/pembayaran-track' });
+  await app.register(sinkronRoutes, { prefix: '/api/v1/sinkron' });
 
   app.get('/', async (_request, reply) => reply.code(404).type('text/plain').send(''));
 

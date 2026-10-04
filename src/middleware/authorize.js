@@ -11,3 +11,9 @@ export function authorize(...roles) {
     }
   };
 }
+
+/** Semua modul keuangan: login + role keuangan. */
+export const keuanganOnly = (fastify) => [fastify.authenticate, authorize('keuangan')];
+
+/** Konteks pelaku untuk service: id user + IP untuk audit. */
+export const actorOf = (request) => ({ userId: request.user.sub, ip: request.ip });

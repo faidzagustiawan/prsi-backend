@@ -15,19 +15,18 @@ const DUMMY_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10);
 
 const hashToken =(raw) => crypto.createHash('sha256').update(raw).digest('hex');
 
+// Bentuk mengikuti AuthUser di frontend (FE_Podorukun-SI/src/store/authStore.ts)
 export const toPublicUser = (user) => ({
   id: user.id,
-  nama: user.nama,
+  name: user.nama,
   email: user.email,
   role: user.role,
-  companyId: user.companyId,
 });
 
 /** Membuat access token + refresh token baru untuk user. */
 const issueTokens = async (user, fastify) => {
   const accessToken = fastify.jwt.sign({
     sub: user.id,
-    companyId: user.companyId,
     role: user.role,
     email: user.email,
   });

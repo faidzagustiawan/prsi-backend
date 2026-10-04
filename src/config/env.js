@@ -1,5 +1,6 @@
 // src/config/env.js
 import dotenv from 'dotenv';
+import path from 'node:path';
 
 dotenv.config();
 
@@ -37,6 +38,21 @@ export const env = {
     ? process.env.FRONTEND_URL.split(',')
     : ['http://localhost:5174'],
   apiUrl: process.env.API_URL || 'http://localhost:3100',
+  // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
+  uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),
+  // Sinkronisasi PR Track (docs/RancanganSistem.md bagian 5-7)
+  sync: {
+    // Saklar utama: false = worker tidak menghubungi Track sama sekali
+    enabled: process.env.SYNC_ENABLED === 'true',
+    trackApiUrl: process.env.TRACK_API_URL || '',
+    readToken: process.env.TRACK_SYNC_TOKEN || '',
+    scheduleToken: process.env.TRACK_SCHEDULE_TOKEN || '',
+    intervalSec: parseInt(process.env.SYNC_INTERVAL_SEC, 10) || 120,
+    pageSize: parseInt(process.env.SYNC_PAGE_SIZE, 10) || 500,
+    gapTimeoutSec: parseInt(process.env.SYNC_GAP_TIMEOUT_SEC, 10) || 600,
+    // Jam rekonsiliasi harian (waktu server)
+    reconcileHour: parseInt(process.env.SYNC_RECONCILE_HOUR, 10) || 2,
+  },
   allowUnsafeDbRole:
     process.env.NODE_ENV === 'development' && process.env.ALLOW_UNSAFE_DB_ROLE === 'true',
 };

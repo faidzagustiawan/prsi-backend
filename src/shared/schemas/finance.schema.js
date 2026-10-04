@@ -1,11 +1,11 @@
 // src/shared/schemas/finance.schema.js
 //
-// Semua tabel SI berada di schema `finance`. Tabel Track (schema public) TIDAK
-// didefinisikan di sini dan tidak boleh di-import: data Track hanya dibaca lewat
-// fungsi finance.track_* (lihat modules/track).
+// Semua tabel SI berada di schema `finance` milik database SI sendiri (VPS SI).
+// Database Track terpisah di server lain; data Track masuk hanya lewat worker
+// sinkronisasi ke tabel cermin trk_* (lihat track.schema.js).
 //
-// Kolom yang menyimpan ID dari Track (company_id, unit_id, ...) sengaja tanpa
-// foreign key ke public. Validasi dilakukan di aplikasi.
+// Kolom pilihan tetap disimpan sebagai VARCHAR dan divalidasi di aplikasi
+// (sesuai ERD 02/10/2026). Daftar nilainya ada di shared/constants.js.
 import {
   pgSchema,
   uuid,
@@ -18,29 +18,21 @@ import {
 
 export const finance = pgSchema('finance');
 
-// Role aplikasi SI, terpisah dari role Track.
-// Daftar final menunggu detail cakupan modul keuangan.
-export const SI_ROLES = ['super_admin', 'finance_admin', 'finance_staff', 'viewer'];
-
-export const siRoleEnum = finance.enum('si_role', SI_ROLES);
-export const userStatusEnum = finance.enum('user_status', ['active', 'inactive']);
-
 export const users = finance.table('users', {
   id: uuid('id').defaultRandom().primaryKey(),
-  // ID perusahaan dari Track (public.companies.id). Null = lintas perusahaan (super_admin).
+  // Sisa rancangan database bersama, tidak dipakai lagi. Dibiarkan supaya
+  // migrasi tetap aditif.
   companyId: uuid('company_id'),
   nama: varchar('nama', { length: 255 }).notNull(),
   // Disimpan lowercase oleh service
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: text('password_hash').notNull(),
-  role: siRoleEnum('role').notNull(),
-  status: userStatusEnum('status').notNull().default('active'),
+  role: varchar('role', { length: 20 }).notNull(),
+  status: varchar('status', { length: 10 }).notNull().default('active'),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
-}, (table) => [
-  index('users_company_idx').on(table.companyId),
-]);
+});
 
 export const refreshTokens = finance.table('refresh_tokens', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -54,7 +46,8 @@ export const refreshTokens = finance.table('refresh_tokens', {
   index('rt_user_idx').on(table.userId),
 ]);
 
-// Jejak audit wajib untuk sistem keuangan: siapa mengubah apa, kapan.
+// Jejak audit: satu baris per aksi, atau per kolom yang berubah (field,
+// nilai_lama, nilai_baru) untuk riwayat seperti riwayat akun di COA.
 export const auditLogs = finance.table('audit_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
   userId: uuid('user_id').references(() => users.id, { onDelete: 'set null' }),
@@ -62,6 +55,9 @@ export const auditLogs = finance.table('audit_logs', {
   action: varchar('action', { length: 100 }).notNull(),
   entity: varchar('entity', { length: 100 }).notNull(),
   entityId: varchar('entity_id', { length: 100 }),
+  field: varchar('field', { length: 60 }),
+  nilaiLama: text('nilai_lama'),
+  nilaiBaru: text('nilai_baru'),
   summary: text('summary'),
   metadata: jsonb('metadata').default({}),
   ipAddress: varchar('ip_address', { length: 64 }),
