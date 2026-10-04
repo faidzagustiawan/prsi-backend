@@ -122,6 +122,9 @@ export const statusPembayaranSi = finance.table('status_pembayaran_si', {
 export const syncCursor = finance.table('sync_cursor', {
   id: varchar('id', { length: 20 }).primaryKey(),
   cursorSeq: bigint('cursor_seq', { mode: 'number' }).notNull().default(0),
+  // Lubang seq pertama yang sedang ditunggu (transaksi Track yang belum commit)
+  gapSeq: bigint('gap_seq', { mode: 'number' }),
+  gapSince: timestamp('gap_since', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

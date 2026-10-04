@@ -4,7 +4,7 @@ API Sistem Informasi Keuangan Podorukun. Berjalan di VPS dan database sendiri, t
 
 **Stack:** Node.js, Fastify 5, Drizzle ORM, PostgreSQL, Redis, Zod, Vitest.
 
-> Baca [docs/RancanganSistem.md](docs/RancanganSistem.md) untuk arsitektur dan aturan konsistensi data dengan Track, dan [docs/API.md](docs/API.md) untuk kontrak API frontend.
+> Baca [docs/RancanganSistem.md](docs/RancanganSistem.md) untuk arsitektur dan aturan konsistensi data dengan Track, [docs/API.md](docs/API.md) untuk kontrak API frontend, dan [docs/TrackSyncAPI.md](docs/TrackSyncAPI.md) untuk kontrak API yang harus disediakan PR Track.
 
 ## Struktur
 
@@ -23,7 +23,9 @@ src/
   modules/          auth, proyek, master-pt, akun, kode-pembantu, saldo-awal,
                     periode, jurnal, lampiran, laporan, hutang, pinjaman,
                     kontrak, shm, akun-sistem, legal (pasal, template,
-                    dokumen), penjualan (piutang, pembayaran PR Track)
+                    dokumen), penjualan (piutang, pembayaran PR Track), sinkron
+  sync/             worker sinkronisasi PR Track: klien, pemetaan, tarik, kirim, rekonsiliasi
+  worker.js         proses worker (npm run worker)
   shared/
     schemas/        finance (users, audit), track (cermin trk_*), akuntansi, hutang, penjualan
     constants.js    nilai pilihan tetap (VARCHAR + validasi aplikasi)
@@ -61,6 +63,8 @@ Swagger UI tersedia di `http://localhost:3100/docs`, hanya bila `NODE_ENV=develo
 | `npm run db:check` | Guard migrasi |
 | `npm run db:migrate` | Guard, lalu migrasi |
 | `npm run seed:dev` | Data contoh lokal |
+| `npm run worker` | Worker sinkronisasi PR Track (butuh `SYNC_ENABLED=true`) |
+| `npm run mock:track` | Server tiruan API Track di port 3900 (dev) |
 | `npm run user:create` | Membuat user SI |
 
 ## Pengaman yang aktif
@@ -69,3 +73,4 @@ Swagger UI tersedia di `http://localhost:3100/docs`, hanya bila `NODE_ENV=develo
 - `db:migrate` menolak migrasi di luar schema `finance`, view/trigger, `DROP ... CASCADE`, GRANT, dan sejenisnya.
 - Token SI memakai secret, audience, dan nama cookie sendiri.
 - Key Redis SI selalu berprefix `si:`.
+- `SYNC_ENABLED=false` memutus semua koneksi ke Track; worker dan tombol sinkron berhenti, SI tetap jalan dengan cermin terakhir.

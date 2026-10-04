@@ -35,6 +35,7 @@ import pasalRoutes from './modules/legal/pasal.routes.js';
 import templateRoutes from './modules/legal/template.routes.js';
 import dokumenRoutes from './modules/legal/dokumen.routes.js';
 import { piutangRoutes, pembayaranTrackRoutes } from './modules/penjualan/piutang.routes.js';
+import sinkronRoutes from './modules/sinkron/sinkron.routes.js';
 import { LAMPIRAN_MAKS_BYTES } from './shared/constants.js';
 
 export async function buildApp({ logger = true } = {}) {
@@ -118,6 +119,7 @@ export async function buildApp({ logger = true } = {}) {
   await app.register(dokumenRoutes, { prefix: '/api/v1/dokumen' });
   await app.register(piutangRoutes, { prefix: '/api/v1/piutang' });
   await app.register(pembayaranTrackRoutes, { prefix: '/api/v1/pembayaran-track' });
+  await app.register(sinkronRoutes, { prefix: '/api/v1/sinkron' });
 
   app.get('/', async (_request, reply) => reply.code(404).type('text/plain').send(''));
 

@@ -325,6 +325,18 @@ Untuk layar antrean Keuangan (tombol "Sinkron" di halaman Piutang):
 
 Tutup buku (`/periode/tutup`) ditolak selama masih ada `gagal_validasi` atau `perlu_ditinjau` di bulan itu.
 
-## Belum tersedia (fase berikutnya)
+## Sinkronisasi PR Track (role keuangan atau admin)
 
-Worker sinkronisasi PR Track (tarik event ke `trk_*`, kirim `outbox_track`, rekonsiliasi harian) dan adendum SPPR / pindah kavling. Sampai worker jalan, data `trk_*` di dev diisi `npm run seed:dev`.
+| Method | Path | Keterangan |
+| --- | --- | --- |
+| GET | `/sinkron/status` | `{ aktif, cursorSeq, dataTrackPer, jedaMenit, errorTerbuka, outbox, antreanPembayaran, rekonsiliasiTerakhir, peringatan[] }` |
+| GET | `/sinkron/log` | 50 putaran terakhir |
+| GET | `/sinkron/error` | Event Track yang belum berhasil diterapkan |
+| POST | `/sinkron/jalankan` | Satu putaran sekarang (tombol "Sinkron" di Piutang). Maks 6x/menit. `409` bila sinkronisasi dimatikan |
+| POST | `/sinkron/rekonsiliasi` | Cek checksum sekarang |
+
+Tampilkan `dataTrackPer` ("data Track per jam HH:MM") di layar yang memakai data PR Track, dan `peringatan` di dashboard Keuangan.
+
+## Belum tersedia
+
+Adendum SPPR / pindah kavling. Endpoint `/sync/v1` di sisi PR Track (kontraknya di [TrackSyncAPI.md](TrackSyncAPI.md)); sampai siap, dev memakai `npm run mock:track`.

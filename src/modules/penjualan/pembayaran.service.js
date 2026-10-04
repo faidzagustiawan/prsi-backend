@@ -117,7 +117,10 @@ export async function prosesPembayaranTx(tx, actor, paymentId) {
     const j = status.jurnalId ? await jurnalRepo.findJurnal(status.jurnalId, tx) : null;
     if (!(status.statusProses === 'perlu_ditinjau' && j?.status === 'dikoreksi')) {
       const alasan = await berubahSejakDijurnal(tx, p, status);
-      return alasan ? setStatus(tx, p.id, 'perlu_ditinjau', { jurnalId: status.jurnalId, alasan }) : status;
+      if (alasan) return setStatus(tx, p.id, 'perlu_ditinjau', { jurnalId: status.jurnalId, alasan });
+      // Sudah dicek terhadap versi cermin ini: tidak dipilih lagi sampai Track berubah
+      await tx.update(statusPembayaranSi).set({ updatedAt: new Date() }).where(eq(statusPembayaranSi.paymentId, p.id));
+      return status;
     }
     // Keuangan sudah membalik jurnal lama: alokasi dilepas, diproses dari awal
     await tx.delete(alokasiPembayaran).where(eq(alokasiPembayaran.paymentId, p.id));
@@ -229,16 +232,17 @@ export async function proses(actor, paymentId) {
 }
 
 /**
- * Proses semua yang perlu: belum pernah diproses, masih menunggu, atau sudah
- * dijurnal tetapi barisnya disinkron ulang setelah diproses (cek perubahan).
+ * Proses semua yang perlu: belum pernah diproses, atau menunggu / sudah
+ * dijurnal tetapi barisnya disinkron ulang dari Track sejak terakhir diproses.
+ * Tanpa perubahan di Track, status menunggu tidak akan berubah, jadi tidak
+ * diproses ulang setiap putaran.
  */
 export async function prosesSemua(actor) {
   const rows = await db.select({ id: trkPayments.id }).from(trkPayments)
     .leftJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
     .where(or(
       isNull(statusPembayaranSi.paymentId),
-      eq(statusPembayaranSi.statusProses, 'menunggu'),
-      and(eq(statusPembayaranSi.statusProses, 'dijurnal'), sql`${trkPayments.syncedAt} > ${statusPembayaranSi.updatedAt}`),
+      and(inArray(statusPembayaranSi.statusProses, ['menunggu', 'dijurnal']), sql`${trkPayments.syncedAt} > ${statusPembayaranSi.updatedAt}`),
     ))
     .orderBy(asc(trkPayments.tanggal));
   const hasil = { diproses: 0, dijurnal: 0, menunggu: 0, gagal_validasi: 0, perlu_ditinjau: 0 };
