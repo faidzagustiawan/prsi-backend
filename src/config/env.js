@@ -53,7 +53,13 @@ export const env = {
     trackApiUrl: process.env.TRACK_API_URL || '',
     readToken: process.env.TRACK_SYNC_TOKEN || '',
     scheduleToken: process.env.TRACK_SCHEDULE_TOKEN || '',
+    // v2 = cursor urutan commit (docs/TrackSyncAPI.md bagian 3.1). v1 hanya untuk Track lama.
+    protocol: process.env.SYNC_PROTOCOL === 'v2' ? 'v2' : 'v1',
     intervalSec: parseInt(process.env.SYNC_INTERVAL_SEC, 10) || 120,
+    // Putaran berikutnya lebih cepat selama masih ada event (backlog atau aktivitas ramai)
+    busyIntervalSec: parseInt(process.env.SYNC_BUSY_INTERVAL_SEC, 10) || 10,
+    // v2: peringatan bila event tertahan transaksi Track yang terbuka selama ini
+    heldWarnSec: parseInt(process.env.SYNC_HELD_WARN_SEC, 10) || 300,
     pageSize: parseInt(process.env.SYNC_PAGE_SIZE, 10) || 500,
     gapTimeoutSec: parseInt(process.env.SYNC_GAP_TIMEOUT_SEC, 10) || 600,
     // Jam rekonsiliasi harian (waktu server)

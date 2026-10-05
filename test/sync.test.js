@@ -4,7 +4,7 @@ vi.mock('../src/config/database.js', () => ({ db: {}, reportDb: {}, client: {} }
 vi.mock('../src/config/env.js', () => ({ env: { isDevelopment: false, sync: {} } }));
 
 const { ENTITIES } = await import('../src/sync/mapping.js');
-const { createTrackClient, assertConfig, TrackError } = await import('../src/sync/track-client.js');
+const { createTrackClient, assertConfig, TrackError, parseCursor } = await import('../src/sync/track-client.js');
 
 const cfg = { trackApiUrl: 'https://track.example', readToken: 'r', scheduleToken: 's', pageSize: 100 };
 
@@ -66,5 +66,38 @@ describe('klien Track', () => {
     await expect(createTrackClient(cfg).checksum('units')).rejects.toMatchObject({ status: 503, retryable: true });
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ message: 'token' }), { status: 401 })));
     await expect(createTrackClient(cfg).checksum('units')).rejects.toMatchObject({ status: 401, retryable: false });
+  });
+});
+
+describe('kontrak v2 (cursor urutan commit)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('parseCursor hanya menerima "txid:seq" desimal', () => {
+    expect(parseCursor('0:67')).toEqual({ txid: 0, seq: 67 });
+    expect(parseCursor('812:1201')).toEqual({ txid: 812, seq: 1201 });
+    for (const bad of ['', '1', '1:', ':1', '-1:0', '1:2:3', 'a:1', '99999999999999999:0']) expect(parseCursor(bad)).toBeNull();
+  });
+
+  it('memanggil /sync/v2/events dengan cursor dan /sync/v2/start', async () => {
+    const urls = [];
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      urls.push(String(url));
+      return new Response(JSON.stringify(String(url).includes('/start')
+        ? { after: '900:0' }
+        : { events: [{ seq: 5, entity: 'units', entity_id: 'u', op: 'U', row_version: 9, payload: {}, cursor: '901:5' }], next_after: '901:5', has_more: false, held_by_open_transaction: false }));
+    }));
+    const c = createTrackClient(cfg);
+    expect((await c.startV2()).after).toBe('900:0');
+    expect((await c.eventsV2('900:0')).next_after).toBe('901:5');
+    expect(urls).toEqual(['https://track.example/sync/v2/start', 'https://track.example/sync/v2/events?after=900%3A0&limit=100']);
+  });
+
+  it('menolak respons v2 tanpa cursor yang sah', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ events: [{ seq: 5, entity: 'units', entity_id: 'u', op: 'U', row_version: 9 }], next_after: '1:5', has_more: false }))));
+    await expect(createTrackClient(cfg).eventsV2('0:0')).rejects.toThrow(TrackError);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ events: [], next_after: 'x', has_more: false }))));
+    await expect(createTrackClient(cfg).eventsV2('0:0')).rejects.toThrow(TrackError);
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({ after: '5' }))));
+    await expect(createTrackClient(cfg).startV2()).rejects.toThrow(TrackError);
   });
 });
