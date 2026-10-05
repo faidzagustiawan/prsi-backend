@@ -1,0 +1,437 @@
+{
+  "spec": "PRTrack-PRSI content checksum v1",
+  "vectors": [
+    {
+      "entity": "companies",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000001",
+        "nama_pt": null,
+        "kode_pt": null,
+        "alamat": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000001|\\N|\\N|\\N",
+      "row_hash": "516189e1dc84532784786b0a8c8f3e94"
+    },
+    {
+      "entity": "companies",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000002",
+        "nama_pt": "contoh nama_pt",
+        "kode_pt": "contoh kode_pt",
+        "alamat": "contoh alamat"
+      },
+      "normalized": [
+        "contoh nama_pt",
+        "contoh kode_pt",
+        "contoh alamat"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000002|contoh nama_pt|contoh kode_pt|contoh alamat",
+      "row_hash": "30c0905466f48dd0169e479ff2ee9033"
+    },
+    {
+      "entity": "companies",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000003",
+        "nama_pt": "",
+        "kode_pt": "",
+        "alamat": ""
+      },
+      "normalized": [
+        "",
+        "",
+        ""
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000003|||",
+      "row_hash": "1db1eb110121ffc4ec605236e3f7bd9d"
+    },
+    {
+      "entity": "projects",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000004",
+        "company_id": null,
+        "nama_proyek": null,
+        "status": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000004|\\N|\\N|\\N",
+      "row_hash": "4086b5d7fa7d0aae759e80ed204065dc"
+    },
+    {
+      "entity": "projects",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000005",
+        "company_id": "00000000-0000-4000-8000-000000000099",
+        "nama_proyek": "contoh nama_proyek",
+        "status": "contoh status"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "contoh nama_proyek",
+        "contoh status"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000005|00000000-0000-4000-8000-000000000099|contoh nama_proyek|contoh status",
+      "row_hash": "5011d7f7dc7b04492021bb92cff78765"
+    },
+    {
+      "entity": "projects",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000006",
+        "company_id": "00000000-0000-4000-8000-000000000099",
+        "nama_proyek": "",
+        "status": ""
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "",
+        ""
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000006|00000000-0000-4000-8000-000000000099||",
+      "row_hash": "c1ce22d438d7b05721380430ab3870bf"
+    },
+    {
+      "entity": "clusters",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000007",
+        "project_id": null,
+        "nama_cluster": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000007|\\N|\\N",
+      "row_hash": "28820b017ae55a5196613a47d4d29616"
+    },
+    {
+      "entity": "clusters",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000008",
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "nama_cluster": "contoh nama_cluster"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "contoh nama_cluster"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000008|00000000-0000-4000-8000-000000000099|contoh nama_cluster",
+      "row_hash": "e2034bee19a8c00eb6e62a9384cc38b3"
+    },
+    {
+      "entity": "clusters",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000009",
+        "project_id": "00000000-0000-4000-8000-000000000099",
+        "nama_cluster": ""
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        ""
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000009|00000000-0000-4000-8000-000000000099|",
+      "row_hash": "9a736778388885b9ad809a6cb4cd22e1"
+    },
+    {
+      "entity": "units",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000010",
+        "cluster_id": null,
+        "nomor_unit": null,
+        "tipe_rumah": null,
+        "luas_tanah": null,
+        "luas_bangunan": null,
+        "status_pembangunan": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000010|\\N|\\N|\\N|\\N|\\N|\\N",
+      "row_hash": "ba165b6163251589bf083cb8ee17d437"
+    },
+    {
+      "entity": "units",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000011",
+        "cluster_id": "00000000-0000-4000-8000-000000000099",
+        "nomor_unit": "contoh nomor_unit",
+        "tipe_rumah": "contoh tipe_rumah",
+        "luas_tanah": "1500000.50",
+        "luas_bangunan": "1500000.50",
+        "status_pembangunan": "contoh status_pembangunan"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "contoh nomor_unit",
+        "contoh tipe_rumah",
+        "1500000.5",
+        "1500000.5",
+        "contoh status_pembangunan"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000011|00000000-0000-4000-8000-000000000099|contoh nomor_unit|contoh tipe_rumah|1500000.5|1500000.5|contoh status_pembangunan",
+      "row_hash": "5b0d86ee5d64164c04abcfeb435778ba"
+    },
+    {
+      "entity": "units",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000012",
+        "cluster_id": "00000000-0000-4000-8000-000000000099",
+        "nomor_unit": "",
+        "tipe_rumah": "",
+        "luas_tanah": "10.00",
+        "luas_bangunan": "10.00",
+        "status_pembangunan": ""
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "",
+        "",
+        "10",
+        "10",
+        ""
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000012|00000000-0000-4000-8000-000000000099|||10|10|",
+      "row_hash": "be098d979edfc11a8f5a17a4f1c3959a"
+    },
+    {
+      "entity": "customers",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000013",
+        "nama": null,
+        "email": null,
+        "nomor_telepon": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000013|\\N|\\N|\\N",
+      "row_hash": "5acb5f8ac47c59bc1f481009014440f9"
+    },
+    {
+      "entity": "customers",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000014",
+        "nama": "contoh nama",
+        "email": "contoh email",
+        "nomor_telepon": "contoh nomor_telepon"
+      },
+      "normalized": [
+        "contoh nama",
+        "contoh email",
+        "contoh nomor_telepon"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000014|contoh nama|contoh email|contoh nomor_telepon",
+      "row_hash": "6b1e74546e00731a8be81865e41d5c23"
+    },
+    {
+      "entity": "customers",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000015",
+        "nama": "",
+        "email": "",
+        "nomor_telepon": ""
+      },
+      "normalized": [
+        "",
+        "",
+        ""
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000015|||",
+      "row_hash": "38656ef13c3fe2857aa98af512933e17"
+    },
+    {
+      "entity": "assignments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000016",
+        "user_id": null,
+        "unit_id": null,
+        "tipe_pembayaran": null,
+        "harga_total": null,
+        "dp": null,
+        "status_kepemilikan": null,
+        "tanggal_pembelian": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000016|\\N|\\N|\\N|\\N|\\N|\\N|\\N",
+      "row_hash": "cdb2185a3d4dacfe77524964bb1c9907"
+    },
+    {
+      "entity": "assignments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000017",
+        "user_id": "00000000-0000-4000-8000-000000000099",
+        "unit_id": "00000000-0000-4000-8000-000000000099",
+        "tipe_pembayaran": "contoh tipe_pembayaran",
+        "harga_total": "1500000.50",
+        "dp": "1500000.50",
+        "status_kepemilikan": "contoh status_kepemilikan",
+        "tanggal_pembelian": "2026-10-05"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "00000000-0000-4000-8000-000000000099",
+        "contoh tipe_pembayaran",
+        "1500000.5",
+        "1500000.5",
+        "contoh status_kepemilikan",
+        "2026-10-05"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000017|00000000-0000-4000-8000-000000000099|00000000-0000-4000-8000-000000000099|contoh tipe_pembayaran|1500000.5|1500000.5|contoh status_kepemilikan|2026-10-05",
+      "row_hash": "bd318f23948f80c9f33248b480bf794a"
+    },
+    {
+      "entity": "assignments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000018",
+        "user_id": "00000000-0000-4000-8000-000000000099",
+        "unit_id": "00000000-0000-4000-8000-000000000099",
+        "tipe_pembayaran": "",
+        "harga_total": "10.00",
+        "dp": "10.00",
+        "status_kepemilikan": "",
+        "tanggal_pembelian": "2026-10-05"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "00000000-0000-4000-8000-000000000099",
+        "",
+        "10",
+        "10",
+        "",
+        "2026-10-05"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000018|00000000-0000-4000-8000-000000000099|00000000-0000-4000-8000-000000000099||10|10||2026-10-05",
+      "row_hash": "109ee273318bfe9d2dbec08042d991ae"
+    },
+    {
+      "entity": "payments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000019",
+        "assignment_id": null,
+        "jumlah_bayar": null,
+        "tanggal_bayar": null,
+        "catatan": null,
+        "bukti_pembayaran": null,
+        "is_auto_inject": null,
+        "created_at": null,
+        "jenis": null,
+        "status_verifikasi": null,
+        "rekening_tujuan": null,
+        "diverifikasi_oleh": null,
+        "diverifikasi_pada": null
+      },
+      "normalized": [
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N",
+        "\\N"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000019|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N",
+      "row_hash": "eec0a8c9472e0f26a918dd3cd203ac79"
+    },
+    {
+      "entity": "payments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000020",
+        "assignment_id": "00000000-0000-4000-8000-000000000099",
+        "jumlah_bayar": "1500000.50",
+        "tanggal_bayar": "2026-10-05",
+        "catatan": "contoh catatan",
+        "bukti_pembayaran": [
+          "https://example.invalid/a",
+          "https://example.invalid/b"
+        ],
+        "is_auto_inject": true,
+        "created_at": "2026-10-05T15:04:05.123456+07:00",
+        "jenis": "contoh jenis",
+        "status_verifikasi": "contoh status_verifikasi",
+        "rekening_tujuan": "contoh rekening_tujuan",
+        "diverifikasi_oleh": "contoh diverifikasi_oleh",
+        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "1500000.5",
+        "2026-10-05",
+        "contoh catatan",
+        "[\"https://example.invalid/a\", \"https://example.invalid/b\"]",
+        "true",
+        "2026-10-05T08:04:05.123456Z",
+        "contoh jenis",
+        "contoh status_verifikasi",
+        "contoh rekening_tujuan",
+        "contoh diverifikasi_oleh",
+        "2026-10-05T08:04:05.123456Z"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000020|00000000-0000-4000-8000-000000000099|1500000.5|2026-10-05|contoh catatan|[\"https://example.invalid/a\", \"https://example.invalid/b\"]|true|2026-10-05T08:04:05.123456Z|contoh jenis|contoh status_verifikasi|contoh rekening_tujuan|contoh diverifikasi_oleh|2026-10-05T08:04:05.123456Z",
+      "row_hash": "b29301c212443bf1c22368d385e1dcd5"
+    },
+    {
+      "entity": "payments",
+      "row": {
+        "id": "00000000-0000-4000-8000-000000000021",
+        "assignment_id": "00000000-0000-4000-8000-000000000099",
+        "jumlah_bayar": "10.00",
+        "tanggal_bayar": "2026-10-05",
+        "catatan": "",
+        "bukti_pembayaran": {
+          "z": 2,
+          "a": 1
+        },
+        "is_auto_inject": false,
+        "created_at": "2026-10-05T15:04:05.123456+07:00",
+        "jenis": "",
+        "status_verifikasi": "",
+        "rekening_tujuan": "",
+        "diverifikasi_oleh": "",
+        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00"
+      },
+      "normalized": [
+        "00000000-0000-4000-8000-000000000099",
+        "10",
+        "2026-10-05",
+        "",
+        "{\"a\": 1, \"z\": 2}",
+        "false",
+        "2026-10-05T08:04:05.123456Z",
+        "",
+        "",
+        "",
+        "",
+        "2026-10-05T08:04:05.123456Z"
+      ],
+      "serialized": "00000000-0000-4000-8000-000000000021|00000000-0000-4000-8000-000000000099|10|2026-10-05||{\"a\": 1, \"z\": 2}|false|2026-10-05T08:04:05.123456Z|||||2026-10-05T08:04:05.123456Z",
+      "row_hash": "c3259e8916b2e1dc724e80e4f9a3dd7f"
+    }
+  ]
+}
