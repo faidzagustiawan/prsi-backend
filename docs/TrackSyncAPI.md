@@ -1,12 +1,12 @@
 # Kontrak API Sinkronisasi PR Track (`/sync/v1`)
 
-Untuk developer PR Track. API ini dipanggil **hanya oleh worker SI Podorukun**. Track tidak memanggil SI dan tidak menyimpan alamat atau kredensial SI. Latar belakangnya ada di [RancanganSistem.md](RancanganSistem.md) bagian 5–7.
+Untuk developer PR Track. API ini dipanggil **hanya oleh worker SI Podorukun**. Track tidak memanggil SI dan tidak menyimpan alamat atau kredensial SI. Latar belakangnya ada di [RancanganSistem.md](RancanganSistem.md) bagian 5â€“7.
 
 Implementasi rujukan yang lolos uji ada di `scripts/mock-track.js` (server tiruan). Bila respons Track asli sama dengan tiruan, worker SI berjalan tanpa perubahan.
 
 ## 0. Fase pilot: PR Track ke SI saja
 
-Untuk pengujian awal, arah sinkronisasi **hanya PR Track → SI**. Data yang sudah ada di SI tidak boleh dikirim kembali ke PR Track selama fase ini.
+Untuk pengujian awal, arah sinkronisasi **hanya PR Track â†’ SI**. Data yang sudah ada di SI tidak boleh dikirim kembali ke PR Track selama fase ini.
 
 ### Endpoint yang boleh dipanggil SI
 
@@ -134,7 +134,7 @@ Trigger tidak berubah, karena `txid` terisi otomatis dari default kolom. Impleme
 
 Event diurutkan menurut `(txid, seq)`. Track hanya mengirim event dengan `txid < pg_snapshot_xmin(pg_current_snapshot())`, dibaca dalam satu transaksi `REPEATABLE READ READ ONLY`.
 
-Semua txid di bawah xmin milik transaksi yang sudah selesai, dan setiap transaksi yang masih berjalan pasti memperoleh txid ≥ xmin. Akibatnya:
+Semua txid di bawah xmin milik transaksi yang sudah selesai, dan setiap transaksi yang masih berjalan pasti memperoleh txid â‰¥ xmin. Akibatnya:
 - commit yang terlambat selalu jatuh **di depan** cursor, tidak pernah di belakangnya;
 - tidak ada lubang yang perlu ditunggu atau dilewati, dan filter 5 detik tidak lagi diperlukan;
 - event satu baris bisa tiba tidak berurutan antartransaksi, tetapi SI menyaringnya dengan `row_version`.
@@ -142,12 +142,12 @@ Semua txid di bawah xmin milik transaksi yang sudah selesai, dan setiap transaks
 ```json
 {
   "events": [ { "seq": 1201, "entity": "payments", "entity_id": "uuid", "op": "U", "row_version": 7,
-                "payload": { "...": "..." }, "created_at": "…", "cursor": "88123:1201" } ],
+                "payload": { "...": "..." }, "created_at": "â€¦", "cursor": "88123:1201" } ],
   "next_after": "88123:1201",
   "has_more": false,
   "held_by_open_transaction": false,
   "watermark": "88124",
-  "server_time": "…"
+  "server_time": "â€¦"
 }
 ```
 
@@ -159,7 +159,12 @@ Semua txid di bawah xmin milik transaksi yang sudah selesai, dan setiap transaks
 
 Mengembalikan `{ "after": "<xmin>:0" }`. Saat muat awal, SI mengambil cursor ini **sebelum** halaman snapshot pertama, lalu memutar ulang semua event setelahnya. Perubahan selama paginasi, termasuk INSERT dengan UUID di belakang halaman, tetap masuk lewat event.
 
-`/sync/v2/snapshot/{entity}` dan `/sync/v2/checksum/{entity}` sama persis dengan v1.
+`/sync/v2/snapshot/{entity}` tetap sama dengan v1. Checksum v2 kini aditif:
+
+`GET /sync/v2/checksum/{entity}` → `{ count, hash, content_hash, watermark }`.
+`hash` tetap MD5 id:row_version; content_hash dihitung dari whitelist berurutan dan watermark adalah xmin dalam snapshot REPEATABLE READ READ ONLY yang sama. Monitor token hanya mendapat health dan checksum, tanpa payload.
+
+Whitelist checksum yang disetujui pemilik pada 5 Oktober 2026 mengikuti BUSINESS_FIELDS Track: projects tanpa kode opsional; customers hanya nama, email, nomor_telepon; tanggal_pembelian assignments memakai date. Field opsional tetap boleh ada di payload/mapping bisnis. Lihat `ops/monitoring/README.md` serta fixture identik `test/fixtures/content-hash-vectors.json` untuk normalisasi dan batas interpretasi. xmin bukan cursor event terakhir.
 
 #### Peralihan v1 ke v2
 
@@ -190,7 +195,7 @@ FROM <tabel> WHERE <baris belum dihapus>;
 `COLLATE "C"` wajib. Tanpanya, urutan mengikuti collation database (en_US mengabaikan `-` di UUID), dan hash akan beda dengan SI.
 
 ```json
-{ "count": 412, "hash": "3f2a…" }
+{ "count": 412, "hash": "3f2aâ€¦" }
 ```
 
 ### `PUT /sync/v1/schedules/{si_jadwal_id}`

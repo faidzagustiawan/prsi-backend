@@ -1,0 +1,255 @@
+{
+  "checked_at": "2026-10-05T16:28:54.943802+00:00",
+  "queries": {
+    "up": [
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "127.0.0.1:9090",
+          "job": "prometheus"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "10.11.26.196:9443",
+          "job": "prsi"
+        },
+        "value": "0"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "10.11.26.196:9100",
+          "job": "node"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "https://podorukunsi.my.id/health",
+          "job": "blackbox"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "127.0.0.1:9100",
+          "job": "node"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "up",
+          "instance": "http://10.11.26.196:3201/health",
+          "job": "blackbox"
+        },
+        "value": "1"
+      }
+    ],
+    "probe_success": [
+      {
+        "labels": {
+          "__name__": "probe_success",
+          "instance": "https://podorukunsi.my.id/health",
+          "job": "blackbox"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "probe_success",
+          "instance": "http://10.11.26.196:3201/health",
+          "job": "blackbox"
+        },
+        "value": "1"
+      }
+    ],
+    "node_scrape_collector_success{instance=\"10.11.26.196:9100\",collector=\"systemd\"}": [
+      {
+        "labels": {
+          "__name__": "node_scrape_collector_success",
+          "collector": "systemd",
+          "instance": "10.11.26.196:9100",
+          "job": "node"
+        },
+        "value": "1"
+      }
+    ],
+    "node_systemd_unit_state{instance=\"10.11.26.196:9100\",state=\"active\"}": [
+      {
+        "labels": {
+          "__name__": "node_systemd_unit_state",
+          "instance": "10.11.26.196:9100",
+          "job": "node",
+          "name": "podorukun-si-api.service",
+          "state": "active",
+          "type": "simple"
+        },
+        "value": "1"
+      },
+      {
+        "labels": {
+          "__name__": "node_systemd_unit_state",
+          "instance": "10.11.26.196:9100",
+          "job": "node",
+          "name": "prtrack-staging-api.service",
+          "state": "active",
+          "type": "simple"
+        },
+        "value": "1"
+      }
+    ],
+    "sync_entity_match": [
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "companies",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "projects",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "clusters",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "units",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "customers",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "assignments",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      },
+      {
+        "labels": {
+          "__name__": "sync_entity_match",
+          "entity": "payments",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "-1"
+      }
+    ],
+    "sync_checker_storage_success": [
+      {
+        "labels": {
+          "__name__": "sync_checker_storage_success",
+          "instance": "127.0.0.1:9199",
+          "job": "sync-checker"
+        },
+        "value": "1"
+      }
+    ]
+  },
+  "track": {
+    "companies": {
+      "count": 4,
+      "hash": "d134e4dd132eefa83a6d95721396cc95",
+      "content_hash": "ac5d04ba4e009fc6130b8a60b1ac97d8",
+      "watermark": "889"
+    },
+    "projects": {
+      "count": 17,
+      "hash": "a85cbbd3f34aadaaeb2a81d3428e2c1e",
+      "content_hash": "90208ed8d9e06e88d895251b601a8492",
+      "watermark": "889"
+    },
+    "clusters": {
+      "count": 55,
+      "hash": "2a1778bb0e6533cb2ec12ea4783fef1f",
+      "content_hash": "3c7c03dac445673a3f7254a81b2ad76f",
+      "watermark": "889"
+    },
+    "units": {
+      "count": 467,
+      "hash": "9f0fb109fef11dca406c50be9181503e",
+      "content_hash": "c185252caa0e8b20dea1eaea8e0e07b2",
+      "watermark": "889"
+    },
+    "customers": {
+      "count": 512,
+      "hash": "6e7bf8e9c3ff7f059dcefd5c9529befb",
+      "content_hash": "b7a931deaf8cb7f16f4d71d7692803f0",
+      "watermark": "889"
+    },
+    "assignments": {
+      "count": 281,
+      "hash": "349ab44ff5f1cf5a1522b89493b36b46",
+      "content_hash": "298a14f2a8da3df025da31b5904d1409",
+      "watermark": "889"
+    },
+    "payments": {
+      "count": 1283,
+      "hash": "6204da766ab0469801a1cbe0c815b2d7",
+      "content_hash": "3cb1a10bb557f9576dc8f6a51d939e93",
+      "watermark": "889"
+    }
+  },
+  "containers": [
+    "prsi-monitoring-caddy-1 17.28MiB / 96MiB",
+    "prsi-monitoring-grafana-1 114MiB / 320MiB",
+    "prsi-monitoring-prometheus-1 33.92MiB / 448MiB",
+    "prsi-monitoring-checker-1 23.52MiB / 96MiB",
+    "prsi-monitoring-alertmanager-1 13.96MiB / 64MiB",
+    "prsi-monitoring-ntfy-1 10.56MiB / 96MiB",
+    "prsi-monitoring-node-1 7.363MiB / 48MiB",
+    "prsi-monitoring-blackbox-1 9.48MiB / 48MiB"
+  ],
+  "disk": [
+    "Filesystem      Size  Used Avail Use% Mounted on",
+    "/dev/vda2        40G  9.2G   29G  25% /"
+  ],
+  "alert_rehearsal": {
+    "checked_at": "2026-10-05T16:21:34.289511+00:00",
+    "target": "monitoring node exporter only",
+    "firing_received": true,
+    "resolved_received": true
+  }
+}
