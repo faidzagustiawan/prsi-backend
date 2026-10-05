@@ -122,7 +122,11 @@ export const statusPembayaranSi = finance.table('status_pembayaran_si', {
 export const syncCursor = finance.table('sync_cursor', {
   id: varchar('id', { length: 20 }).primaryKey(),
   cursorSeq: bigint('cursor_seq', { mode: 'number' }).notNull().default(0),
-  // Lubang seq pertama yang sedang ditunggu (transaksi Track yang belum commit)
+  // Kontrak v2: cursor = (cursor_txid, cursor_seq). NULL = belum pernah v2;
+  // peralihan dari v1 dimulai di (0, cursor_seq) karena event pra-v2 ber-txid 0.
+  cursorTxid: bigint('cursor_txid', { mode: 'number' }),
+  // v1: lubang seq pertama yang sedang ditunggu. v2: tidak dipakai; gap_since
+  // menjadi "sejak kapan event tertahan transaksi Track yang masih terbuka".
   gapSeq: bigint('gap_seq', { mode: 'number' }),
   gapSince: timestamp('gap_since', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),

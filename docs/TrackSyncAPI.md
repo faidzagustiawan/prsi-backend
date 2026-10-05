@@ -110,6 +110,65 @@ Event dengan `seq > after_seq`, urut naik, maksimal `limit` (SI memakai 500, mak
 
 `next_after_seq` = seq event terakhir di halaman, atau `after_seq` bila kosong. Lubang seq (transaksi rollback) tidak perlu ditangani Track; SI menunggu 10 menit lalu melewatinya.
 
+> **v1 tidak lossless.** Pilot 5 Oktober 2026 mereproduksi dua kasus kehilangan event:
+> 1. Transaksi yang lebih lama dari batas tunggu lubang commit di belakang cursor.
+> 2. INSERT di belakang halaman snapshot.
+>
+> Kontrak baru memakai v2 (bagian 3.1). v1 hanya dipertahankan untuk peralihan.
+
+### 3.1 Kontrak v2: cursor urutan commit (`SYNC_PROTOCOL=v2`)
+
+**Perubahan database Track (aditif, kompatibel dengan v1):**
+
+```sql
+ALTER TABLE sync_outbox ADD COLUMN txid xid8;                 -- txid transaksi penulis
+UPDATE sync_outbox SET txid = '0' WHERE txid IS NULL;         -- event pra-v2 diurutkan paling awal
+ALTER TABLE sync_outbox ALTER COLUMN txid SET DEFAULT pg_current_xact_id();
+ALTER TABLE sync_outbox ALTER COLUMN txid SET NOT NULL;
+CREATE INDEX sync_outbox_txid_seq_idx ON sync_outbox (txid, seq);
+```
+
+Trigger tidak berubah, karena `txid` terisi otomatis dari default kolom. Implementasi rujukan ada di `staging/sync.sql` repo Track.
+
+#### `GET /sync/v2/events?after=<txid>:<seq>&limit=<n>`
+
+Event diurutkan menurut `(txid, seq)`. Track hanya mengirim event dengan `txid < pg_snapshot_xmin(pg_current_snapshot())`, dibaca dalam satu transaksi `REPEATABLE READ READ ONLY`.
+
+Semua txid di bawah xmin milik transaksi yang sudah selesai, dan setiap transaksi yang masih berjalan pasti memperoleh txid ≥ xmin. Akibatnya:
+- commit yang terlambat selalu jatuh **di depan** cursor, tidak pernah di belakangnya;
+- tidak ada lubang yang perlu ditunggu atau dilewati, dan filter 5 detik tidak lagi diperlukan;
+- event satu baris bisa tiba tidak berurutan antartransaksi, tetapi SI menyaringnya dengan `row_version`.
+
+```json
+{
+  "events": [ { "seq": 1201, "entity": "payments", "entity_id": "uuid", "op": "U", "row_version": 7,
+                "payload": { "...": "..." }, "created_at": "…", "cursor": "88123:1201" } ],
+  "next_after": "88123:1201",
+  "has_more": false,
+  "held_by_open_transaction": false,
+  "watermark": "88124",
+  "server_time": "…"
+}
+```
+
+- `held_by_open_transaction: true` berarti ada event yang sudah commit tetapi tertahan oleh transaksi Track yang lebih tua dan belum selesai. Event itu datang di putaran berikutnya.
+- SI mencatat lamanya tertahan di `sync_cursor.gap_since` dan memberi peringatan setelah `SYNC_HELD_WARN_SEC`.
+- Track sebaiknya memasang `idle_in_transaction_session_timeout` supaya transaksi yang menggantung tidak menahan sinkronisasi.
+
+#### `GET /sync/v2/start`
+
+Mengembalikan `{ "after": "<xmin>:0" }`. Saat muat awal, SI mengambil cursor ini **sebelum** halaman snapshot pertama, lalu memutar ulang semua event setelahnya. Perubahan selama paginasi, termasuk INSERT dengan UUID di belakang halaman, tetap masuk lewat event.
+
+`/sync/v2/snapshot/{entity}` dan `/sync/v2/checksum/{entity}` sama persis dengan v1.
+
+#### Peralihan v1 ke v2
+
+Saat `sync_cursor.cursor_txid` masih NULL, SI memulai dari `0:<cursor_seq>`. Event pra-v2 ber-txid 0 sehingga tidak dikirim ulang, sementara semua event v2 dikirim. Event yang dulu terlewat oleh v1 ikut terkirim; event yang sudah diterapkan diabaikan lewat `row_version`.
+
+#### Retensi
+
+`sync_prune_outbox(interval '30 days')` dijalankan oleh role pemilik dari job terjadwal Track, dengan batas bawah 7 hari.
+
 ### `GET /sync/v1/snapshot/{entity}?page_after_id=<uuid>&limit=<n>`
 
 Semua baris yang belum dihapus, urut `id::text COLLATE "C"`, mulai setelah `page_after_id`. Setiap baris = kolom bagian 4 + `id` + `row_version`.

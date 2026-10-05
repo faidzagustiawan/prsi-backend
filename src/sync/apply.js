@@ -27,6 +27,8 @@ async function localId(tx, entity, trackId) {
  * snapshot = true: baris dari snapshot (keadaan Track saat ini), versi yang
  * sama tetap ditimpa supaya rekonsiliasi bisa memulihkan baris yang keliru.
  * Hasil: 'baru' | 'ubah' | 'hapus' | 'abaikan'
+ * Invarian: ApplyError hanya dilempar SEBELUM ada tulis, jadi pemanggil boleh
+ * melanjutkan transaksi yang sama tanpa savepoint (lihat applyBatch di pull.js).
  */
 export async function applyChange(tx, change) {
   const def = ENTITIES[change.entity];

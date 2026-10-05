@@ -7,7 +7,7 @@ import { db, sessionClient } from '../config/database.js';
 import { env } from '../config/env.js';
 import { syncLog } from '../shared/schemas/track.schema.js';
 import { createTrackClient, TrackError } from './track-client.js';
-import { initialLoadIfEmpty, pullEvents, retryErrors } from './pull.js';
+import { initialLoadIfEmpty, pullEvents, pullEventsV2, retryErrors } from './pull.js';
 import { pushOutbox } from './push.js';
 import { reconcile } from './reconcile.js';
 import { prosesSemua } from '../modules/penjualan/pembayaran.service.js';
@@ -64,10 +64,13 @@ export async function runCycle({ client } = {}) {
   return withLock(async () => {
     const tarik = await logged('semua', 'tarik', async (counts) => {
       const muatAwal = await initialLoadIfEmpty(track, counts);
-      const cursor = await pullEvents(track, counts);
+      const v2 = env.sync.protocol === 'v2';
+      const cursor = v2 ? await pullEventsV2(track, counts) : await pullEvents(track, counts);
       // Setelah tarik: induk yang baru tiba di putaran ini langsung melepas event yang tertahan
       await retryErrors(counts);
-      return { muatAwal, cursor: cursor.cursorSeq, menungguLubang: cursor.gapSeq ?? null };
+      return v2
+        ? { protokol: 'v2', muatAwal, cursor: `${cursor.cursorTxid ?? 0}:${cursor.cursorSeq}`, tertahanSejak: cursor.held ? cursor.gapSince : null }
+        : { protokol: 'v1', muatAwal, cursor: cursor.cursorSeq, menungguLubang: cursor.gapSeq ?? null };
     });
     // Alur 2 tetap dijalankan walau Track sedang tidak terjangkau: antrean lokal tetap diproses
     const pembayaran = await prosesSemua(WORKER_ACTOR);

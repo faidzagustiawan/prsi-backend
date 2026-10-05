@@ -21,10 +21,21 @@ const ringkas = (r) => {
     + ` | pembayaran ${JSON.stringify(r.pembayaran)} | kirim ${r.kirim.status} (${r.kirim.counts.terkirim} terkirim, ${r.kirim.counts.gagalKirim} gagal)`;
 };
 
+// Ada event di putaran ini: kemungkinan masih ada lanjutan, cek lagi lebih cepat.
+// Sepi: kembali ke interval normal supaya Track (dan compute Neon-nya) tidak terus dibangunkan.
+const nextDelaySec = (r, cfg = env.sync) => {
+  const c = r?.tarik?.counts;
+  const sibuk = c && (c.baru + c.ubah + c.gagal > 0);
+  return sibuk ? Math.min(cfg.busyIntervalSec, cfg.intervalSec) : cfg.intervalSec;
+};
+
 async function tick() {
   if (stopping) return;
+  let delaySec = env.sync.intervalSec;
   try {
-    log('[sync]', ringkas(await runCycle()));
+    const r = await runCycle();
+    delaySec = nextDelaySec(r);
+    log('[sync]', ringkas(r));
     const now = new Date();
     const day = now.toISOString().slice(0, 10);
     if (now.getHours() >= env.sync.reconcileHour && lastReconcileDay !== day) {
@@ -35,7 +46,7 @@ async function tick() {
   } catch (err) {
     log('[sync] galat:', err.message);
   } finally {
-    if (!stopping) timer = setTimeout(tick, env.sync.intervalSec * 1000);
+    if (!stopping) timer = setTimeout(tick, delaySec * 1000);
   }
 }
 

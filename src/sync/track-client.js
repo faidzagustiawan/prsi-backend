@@ -59,6 +59,15 @@ async function request(cfg, method, path, { token, body, idempotencyKey } = {}) 
 
 const isInt = (v) => Number.isSafeInteger(v) && v >= 0;
 
+/** "txid:seq" -> { txid, seq }; null bila bentuknya salah. */
+export function parseCursor(value) {
+  const m = /^(\d{1,16}):(\d{1,16})$/.exec(String(value ?? ''));
+  if (!m) return null;
+  const txid = Number(m[1]), seq = Number(m[2]);
+  return isInt(txid) && isInt(seq) ? { txid, seq } : null;
+}
+const isCursor = (v) => parseCursor(v) !== null;
+
 export function createTrackClient(cfg = env.sync) {
   assertConfig(cfg);
   const get = (path) => request(cfg, 'GET', path, { token: cfg.readToken }).then((r) => r.json);
@@ -75,6 +84,31 @@ export function createTrackClient(cfg = env.sync) {
           throw new TrackError(`Event tidak sesuai kontrak: ${JSON.stringify(e).slice(0, 200)}`, { retryable: false });
         }
       }
+      return json;
+    },
+
+    /**
+     * Kontrak v2: cursor "txid:seq" menurut urutan commit. Track hanya
+     * mengirim event dari transaksi yang sudah selesai, jadi tidak ada lubang
+     * yang perlu ditunggu dan commit terlambat tidak pernah jatuh di belakang cursor.
+     */
+    async eventsV2(after, limit = cfg.pageSize) {
+      const json = await get(`sync/v2/events?after=${encodeURIComponent(after)}&limit=${limit}`);
+      if (!json || !Array.isArray(json.events) || !isCursor(json.next_after) || typeof json.has_more !== 'boolean') {
+        throw new TrackError('Bentuk respons /v2/events tidak sesuai kontrak.', { retryable: false });
+      }
+      for (const e of json.events) {
+        if (!isInt(e.seq) || !e.entity || !e.entity_id || !['I', 'U', 'D'].includes(e.op) || !isInt(e.row_version) || !isCursor(e.cursor)) {
+          throw new TrackError(`Event tidak sesuai kontrak: ${JSON.stringify(e).slice(0, 200)}`, { retryable: false });
+        }
+      }
+      return json;
+    },
+
+    /** Cursor awal muat awal v2: diambil SEBELUM halaman snapshot pertama. */
+    async startV2() {
+      const json = await get('sync/v2/start');
+      if (!json || !isCursor(json.after)) throw new TrackError('Bentuk respons /v2/start tidak sesuai kontrak.', { retryable: false });
       return json;
     },
 

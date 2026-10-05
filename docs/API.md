@@ -357,7 +357,7 @@ Tutup buku (`/periode/tutup`) ditolak selama masih ada `gagal_validasi` atau `pe
 
 | Method | Path | Keterangan |
 | --- | --- | --- |
-| GET | `/sinkron/status` | `{ aktif, cursorSeq, dataTrackPer, jedaMenit, errorTerbuka, outbox, antreanPembayaran, rekonsiliasiTerakhir, peringatan[] }` |
+| GET | `/sinkron/status` | `{ aktif, protokol, cursor, cursorSeq, menungguLubangSeq, tertahanSejak, dataTrackPer, jedaMenit, errorTerbuka, outbox, antreanPembayaran, rekonsiliasiTerakhir, peringatan[] }` |
 | GET | `/sinkron/log` | 50 putaran terakhir |
 | GET | `/sinkron/error` | Event Track yang belum berhasil diterapkan |
 | POST | `/sinkron/jalankan` | Satu putaran sekarang (tombol "Sinkron" di Piutang). Maks 6x/menit. `409` bila sinkronisasi dimatikan |

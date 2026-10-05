@@ -81,6 +81,26 @@ app.get('/sync/v1/events', async (request) => {
   return { events: page, next_after_seq: page.at(-1)?.seq ?? after, has_more: events.some((e) => e.seq > (page.at(-1)?.seq ?? after)), server_time: new Date().toISOString() };
 });
 
+// ── Kontrak /sync/v2 (cursor "txid:seq") ────────────────────
+// Tiruan tidak punya transaksi bersamaan: tiap event adalah satu transaksi
+// yang langsung commit, jadi txid = seq sudah urut commit.
+const cursorOf = (e) => `${e.seq}:${e.seq}`;
+app.get('/sync/v2/start', async () => ({ after: `${seq + 1}:0`, server_time: new Date().toISOString() }));
+app.get('/sync/v2/events', async (request, reply) => {
+  const m = /^(\d+):(\d+)$/.exec(request.query.after ?? '0:0');
+  if (!m) return reply.code(400).send({ message: 'after tidak valid' });
+  const [tx, s] = [Number(m[1]), Number(m[2])];
+  const limit = Math.min(Number(request.query.limit ?? 500), 1000);
+  const rest = events.filter((e) => e.seq > tx || (e.seq === tx && e.seq > s));
+  const page = rest.slice(0, limit).map((e) => ({ ...e, cursor: cursorOf(e) }));
+  return { events: page, next_after: page.at(-1)?.cursor ?? `${tx}:${s}`, has_more: rest.length > limit,
+    held_by_open_transaction: false, watermark: String(seq + 1), server_time: new Date().toISOString() };
+});
+for (const path of ['snapshot', 'checksum']) {
+  app.get(`/sync/v2/${path}/:entity`, async (request, reply) => app.inject({ url: request.url.replace('/sync/v2/', '/sync/v1/'), headers: request.headers })
+    .then((r) => reply.code(r.statusCode).send(r.json())));
+}
+
 app.get('/sync/v1/snapshot/:entity', async (request, reply) => {
   const map = store[request.params.entity];
   if (!map) return reply.code(404).send({ message: 'Entitas tidak dikenal' });

@@ -36,11 +36,19 @@ async function status() {
   const gagal = outbox.find((o) => o.status === 'gagal');
   if (gagal?.maks >= 5) peringatan.push(`${gagal.n} kiriman ke Track gagal berulang.`);
   if (rekon?.status === 'gagal') peringatan.push(`Rekonsiliasi terakhir gagal: ${rekon.pesan}`);
+  const v2 = env.sync.protocol === 'v2';
+  // v2: gap_since = event tertahan transaksi Track yang masih terbuka
+  if (v2 && cursor.gapSince && (Date.now() - cursor.gapSince.getTime()) / 1000 >= env.sync.heldWarnSec) {
+    peringatan.push(`Event Track tertahan transaksi terbuka sejak ${cursor.gapSince.toISOString()}.`);
+  }
 
   return {
     aktif: env.sync.enabled,
+    protokol: env.sync.protocol,
+    cursor: v2 ? `${cursor.cursorTxid ?? 0}:${cursor.cursorSeq}` : String(cursor.cursorSeq),
     cursorSeq: cursor.cursorSeq,
-    menungguLubangSeq: cursor.gapSeq,
+    menungguLubangSeq: v2 ? null : cursor.gapSeq,
+    tertahanSejak: v2 ? cursor.gapSince : null,
     dataTrackPer: terakhir?.selesai ?? null,
     jedaMenit,
     errorTerbuka: Number(errorTerbuka),
