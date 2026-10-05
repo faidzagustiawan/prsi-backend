@@ -1,0 +1,1 @@
+ALTER TABLE "finance"."sync_cursor" ADD COLUMN "cursor_txid" bigint;

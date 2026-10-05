@@ -36,6 +36,13 @@
       "when": 1791097051848,
       "tag": "0004_sync_gap",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791193020587,
+      "tag": "0005_sync_v2_cursor",
+      "breakpoints": true
     }
   ]
 }
