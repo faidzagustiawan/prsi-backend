@@ -58,6 +58,8 @@ it.runIf(process.env.MONITOR_TEST_DB === 'local')('executes invariant and normal
       const [actual]=await tx.unsafe(checksum);
       const md5 = (value) => createHash('md5').update(value).digest('hex');
       expect(actual.content_hash).toBe(md5(`${id}:${md5(`${id}| Acme |\\N|\\N`)}`));
+      await tx`INSERT INTO trk_companies VALUES ('00000000-0000-4000-8000-000000000002',1,false,'{"dummy":"seed","nama_pt":"Uji"}','Uji',null,null)`;
+      expect((await tx.unsafe(checksum))[0]).toMatchObject({ count: 1, content_hash: actual.content_hash });
       await tx`UPDATE trk_companies SET is_deleted=true`;
       expect((await tx.unsafe(checksum))[0].content_hash).toBe('d41d8cd98f00b204e9800998ecf8427e');
     });
