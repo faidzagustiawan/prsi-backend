@@ -41,7 +41,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "value",
@@ -59,7 +59,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -69,7 +69,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -141,7 +141,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "value",
@@ -150,7 +150,7 @@
                   "text": "PERIKSA"
                 },
                 "1": {
-                  "text": "TANPA PELANGGARAN"
+                  "text": "VALID"
                 }
               }
             },
@@ -159,7 +159,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -169,7 +169,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -241,7 +241,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "value",
@@ -256,7 +256,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -266,7 +266,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -338,14 +338,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -355,7 +355,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -408,7 +408,7 @@
       "id": 31,
       "title": "Track staging ↔ PRSI",
       "description": "Setiap entitas: cocok, beda isi terkonfirmasi, atau pending. Pemeriksaan berjalan setiap dua menit.",
-      "type": "stat",
+      "type": "bargauge",
       "gridPos": {
         "x": 0,
         "y": 3,
@@ -431,7 +431,7 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "value",
@@ -452,7 +452,7 @@
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -462,7 +462,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -487,28 +487,28 @@
                 "color": "green"
               }
             ]
-          }
+          },
+          "min": 0,
+          "max": 1
         },
         "overrides": []
       },
       "options": {
-        "colorMode": "value",
-        "graphMode": "none",
-        "textMode": "auto",
-        "orientation": "auto",
-        "wideLayout": true,
-        "justifyMode": "auto",
-        "text": {
-          "titleSize": 12,
-          "valueSize": 24
-        },
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
           ],
           "fields": "",
           "values": false
-        }
+        },
+        "text": {
+          "titleSize": 12,
+          "valueSize": 14
+        },
+        "minVizHeight": 16
       }
     },
     {
@@ -559,14 +559,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -576,7 +576,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -662,14 +662,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM ADA SAMPEL",
+          "noValue": "—",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM ADA SAMPEL",
+                  "text": "—",
                   "color": "gray"
                 }
               }
@@ -679,7 +679,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM ADA SAMPEL",
+                  "text": "—",
                   "color": "gray"
                 }
               }
@@ -717,12 +717,12 @@
         "colorMode": "value",
         "graphMode": "none",
         "textMode": "auto",
-        "orientation": "auto",
+        "orientation": "vertical",
         "wideLayout": true,
         "justifyMode": "auto",
         "text": {
           "titleSize": 12,
-          "valueSize": 24
+          "valueSize": 20
         },
         "reduceOptions": {
           "calcs": [
@@ -767,14 +767,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -784,7 +784,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -856,14 +856,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -873,7 +873,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -952,14 +952,14 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "noValue": "BELUM DIKETAHUI",
+          "noValue": "N/A",
           "mappings": [
             {
               "type": "special",
               "options": {
                 "match": "null",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }
@@ -969,7 +969,7 @@
               "options": {
                 "match": "nan",
                 "result": {
-                  "text": "BELUM DIKETAHUI",
+                  "text": "N/A",
                   "color": "gray"
                 }
               }

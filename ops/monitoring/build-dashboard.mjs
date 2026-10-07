@@ -41,7 +41,7 @@ const colors = (steps) => ({mode:'absolute',steps:steps.map(([value,color])=>({v
 const good = colors([[null,'red'],[1,'green']]);
 const zeroGood = colors([[null,'green'],[1,'red']]);
 const map = (values) => [{type:'value',options:Object.fromEntries(Object.entries(values).map(([key,text])=>[key,{text}]))}];
-function compact(title,description,pos,targets,{unit='short',thresholds=good,mappings=[],noValue='BELUM DIKETAHUI',type='stat',colorMode='value'}={}) {
+function compact(title,description,pos,targets,{unit='short',thresholds=good,mappings=[],noValue='N/A',type='stat',colorMode='value'}={}) {
   const p={id:++id,title,description,type,gridPos:pos,datasource:{type:'prometheus',uid:'prometheus'},
     targets:targets.map(([expr,legend],i)=>({refId:String.fromCharCode(65+i),expr,legendFormat:legend,instant:type!=='timeseries',range:type==='timeseries'})),
     fieldConfig:{defaults:{unit,noValue,mappings:[...mappings,...['null','nan'].map(match=>({type:'special',options:{match,result:{text:noValue,color:'gray'}}}))],color:{mode:'thresholds'},thresholds,decimals:unit==='percentunit'?0:undefined},overrides:[]},
@@ -55,16 +55,19 @@ compact('LAYANAN','Semua target terpantau, kedua health probe berhasil, dan serv
 ],{mappings:map({0:'PERIKSA',1:'SEHAT'}),colorMode:'background'});
 compact('INTEGRITAS','Seluruh aturan yang dipantau harus nol; pemeriksaan harus berhasil dan berumur paling lama 11 menit.',{x:6,y:0,w:6,h:3},[
   ['(min(monitor_collection_success) == bool 1) * (max(accounting_invariant_violations) == bool 0) * (max(monitor_collection_age_seconds) <= bool 660)','Integritas']
-],{mappings:map({0:'PERIKSA',1:'TANPA PELANGGARAN'}),colorMode:'background'});
+],{mappings:map({0:'PERIKSA',1:'VALID'}),colorMode:'background'});
 compact('DATA COCOK','Jumlah entitas yang isi dan jumlah barisnya cocok. Pembanding adalah Track STAGING, bukan production.',{x:12,y:0,w:6,h:3},[
   ['sum((sync_entity_match == bool 1) * on(entity) (sync_checker_success == bool 1))','Entitas']
 ],{thresholds:colors([[null,'orange'],[7,'green']]),mappings:map({7:'7 / 7 COCOK'}),colorMode:'background'});
 compact('BACKUP TERAKHIR','Umur backup yang berhasil diverifikasi. Batas peringatan 26 jam; unknown berarti bukti tidak tersedia.',{x:18,y:0,w:6,h:3},[
   ['backup_last_age_seconds','Umur backup']
 ],{unit:'s',thresholds:colors([[null,'green'],[86400,'orange'],[93600,'red']]),colorMode:'background'});
-compact('Track staging ↔ PRSI','Setiap entitas: cocok, beda isi terkonfirmasi, atau pending. Pemeriksaan berjalan setiap dua menit.',{x:0,y:3,w:12,h:5},[
+const entities=compact('Track staging ↔ PRSI','Setiap entitas: cocok, beda isi terkonfirmasi, atau pending. Pemeriksaan berjalan setiap dua menit.',{x:0,y:3,w:12,h:5},[
   ['sync_entity_match','{{entity}}']
-],{thresholds:colors([[null,'orange'],[0,'red'],[1,'green']]),mappings:map({'-1':'PENDING',0:'BEDA',1:'COCOK'})});
+],{type:'bargauge',thresholds:colors([[null,'orange'],[0,'red'],[1,'green']]),mappings:map({'-1':'PENDING',0:'BEDA',1:'COCOK'})});
+entities.fieldConfig.defaults.min=0;entities.fieldConfig.defaults.max=1;
+entities.options.text={titleSize:12,valueSize:14};
+entities.options.minVizHeight=16;
 const host=compact('Kapasitas server','Aplikasi = VPS backend; Monitor = VPS monitoring. Hijau <80%, kuning 80–90%, merah ≥90%.',{x:12,y:3,w:6,h:5},[
   ['1-node_memory_MemAvailable_bytes{instance="10.11.26.196:9100"}/node_memory_MemTotal_bytes{instance="10.11.26.196:9100"}','RAM · Aplikasi'],
   ['1-node_memory_MemAvailable_bytes{instance="127.0.0.1:9100"}/node_memory_MemTotal_bytes{instance="127.0.0.1:9100"}','RAM · Monitor'],
@@ -76,7 +79,9 @@ const api=compact('API · 5 menit terakhir','Latensi kosong saat belum ada reque
   ['rate(api_requests_total[5m])','Request / detik'],
   ['rate(api_errors_5xx_total[5m])','Error 5xx / detik'],
   ['histogram_quantile(0.95, sum by(le)(rate(api_request_duration_seconds_bucket[5m])))','Latensi p95']
-],{thresholds:colors([[null,'blue']]),noValue:'BELUM ADA SAMPEL'});
+],{thresholds:colors([[null,'blue']]),noValue:'—'});
+api.options.orientation='vertical';
+api.options.text={titleSize:12,valueSize:20};
 api.fieldConfig.overrides=[{matcher:{id:'byName',options:'Latensi p95'},properties:[{id:'unit',value:'s'}]}];
 compact('Lalu lintas API','Tren request dan error server. Gunakan rentang waktu di pojok kanan atas.',{x:0,y:8,w:12,h:4},[
   ['rate(api_requests_total[5m])','Request / detik'],['rate(api_errors_5xx_total[5m])','Error 5xx / detik']
