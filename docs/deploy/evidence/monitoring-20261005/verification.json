@@ -1,0 +1,65 @@
+{
+  "date": "2026-10-05",
+  "tests": {
+    "passed": 57,
+    "failed": 0,
+    "database": "localhost/podorukun_si_dev only",
+    "track_vectors": 21
+  },
+  "lint": {
+    "errors": 0,
+    "warnings": 31
+  },
+  "migration_check": {
+    "safe_files": 6
+  },
+  "backend_deployed": false,
+  "worker_enabled": false,
+  "safety_gates": {
+    "ALLOW_UNSAFE_DB_ROLE": false,
+    "SYNC_ENABLED": false,
+    "SYNC_WRITE_ENABLED": false
+  },
+  "full_stack_backup": "/var/backups/prsi-monitoring/20261005T161347Z",
+  "monitoring_rollback_rehearsal": "forced failure after swap restored previous configuration; Prometheus ready and Grafana database ok",
+  "restore_checks": {
+    "path": "/var/tmp/prsi-monitor-restore-20261005T162746Z",
+    "grafana.db": "ok",
+    "auth.db": "ok",
+    "cache.db": "ok",
+    "full_prometheus_restore": "not tested"
+  },
+  "exporter": {
+    "bind": "10.11.26.196:9100",
+    "systemd_collector_success": 1,
+    "allowed_sources": [
+      "localhost",
+      "10.11.20.216/32"
+    ],
+    "backup": "/var/backups/podorukun-si/node-exporter-20261005T162205Z"
+  },
+  "external_windows_probe": {
+    "43.173.11.71": {
+      "ports": [
+        3100,
+        3201,
+        9100,
+        9443
+      ],
+      "result": "all timed out"
+    },
+    "43.157.230.218": {
+      "ports": [
+        3000,
+        8085,
+        9090,
+        9093,
+        9100,
+        9115,
+        9199
+      ],
+      "result": "all timed out"
+    }
+  },
+  "application_deploy_scripts": "reviewed; bash/Python syntax passed; application deployment/rollback not executed before merge"
+}

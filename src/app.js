@@ -8,7 +8,11 @@ import fastifyMultipart from '@fastify/multipart';
 import { sql } from 'drizzle-orm';
 
 import { env } from './config/env.js';
-import { db } from './config/database.js';
+import { db, reportClient } from './config/database.js';
+import monitoringRoutes from './monitoring/routes.js';
+import { checksum } from './monitoring/checksum.js';
+import { createCollector } from './monitoring/collector.js';
+import { apiMetrics } from './monitoring/metrics.js';
 import authPlugin from './plugins/auth.js';
 import validatorPlugin from './plugins/validator.js';
 import swaggerPlugin from './plugins/swagger.js';
@@ -99,6 +103,13 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
   });
 
   app.setErrorHandler(globalErrorHandler);
+
+  const metrics = apiMetrics(app);
+  await app.register(monitoringRoutes, {
+    prefix: '/internal', collector: createCollector(reportClient), metrics,
+    checksum: (entity) => checksum(reportClient, entity),
+    token: process.env.PRSI_MONITOR_TOKEN, poll: !documentationOnly,
+  });
 
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(proyekRoutes, { prefix: '/api/v1/proyek' });

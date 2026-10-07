@@ -1,0 +1,24 @@
+
+> podorukun-si-api@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 D:/PodoRukun/PodorukunSI/backend
+
+ ✓ test/money.test.js (4 tests) 7ms
+ ✓ test/monitoring-checker.test.js (3 tests) 56ms
+ ✓ test/monitoring-track-vectors.test.js (1 test) 189ms
+ ✓ test/monitoring.test.js (4 tests) 354ms
+   ✓ private monitoring > authenticates without user session, rate limits and rejects unknown entities  343ms
+ ✓ test/lampiran-sniff.test.js (2 tests) 6ms
+ ✓ test/sync.test.js (10 tests) 40ms
+ ✓ test/penjualan.test.js (10 tests) 10ms
+ ✓ test/check-migrations.test.js (14 tests) 1599ms
+ ✓ test/monitoring-db.test.js (2 tests) 572ms
+ ✓ test/openapi.test.js (7 tests) 549ms
+
+ Test Files  10 passed (10)
+      Tests  57 passed (57)
+   Start at  23:34:20
+   Duration  4.14s (transform 1.08s, setup 0ms, collect 9.35s, tests 3.38s, environment 4ms, prepare 3.10s)
+

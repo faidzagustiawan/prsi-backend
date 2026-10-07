@@ -1,0 +1,54 @@
+groups:
+  - name: prsi
+    rules:
+      - alert: ApiDown
+        expr: probe_success == 0
+        for: 2m
+        labels: {severity: critical}
+      - alert: High5xx
+        expr: rate(api_errors_5xx_total[5m]) / clamp_min(rate(api_requests_total[5m]), 0.001) > 0.05
+        for: 5m
+        labels: {severity: warning}
+      - alert: DiskHigh
+        expr: 1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} / node_filesystem_size_bytes > 0.8
+        for: 5m
+        labels: {severity: warning}
+      - alert: SyncLag
+        expr: sync_observed_difference_seconds > 600 or sync_held_seconds > 600 or sync_last_cycle_age_seconds > 600
+        for: 2m
+        labels: {severity: warning}
+      - alert: SyncError
+        expr: sync_error_unresolved > 0 or outbox_failed > 0
+        for: 2m
+        labels: {severity: critical}
+      - alert: EntityMismatch
+        expr: sync_entity_match == 0
+        labels: {severity: critical}
+      - alert: InvariantViolation
+        expr: accounting_invariant_violations > 0
+        for: 1m
+        labels: {severity: critical}
+      - alert: BackupOld
+        expr: backup_last_age_seconds > 93600
+        for: 5m
+        labels: {severity: warning}
+      - alert: BackupUnknown
+        expr: backup_timestamp_available == 0
+        for: 10m
+        labels: {severity: warning}
+      - alert: ScrapeMissing
+        expr: up == 0
+        for: 2m
+        labels: {severity: critical}
+      - alert: CollectorFailed
+        expr: monitor_collection_success == 0 or monitor_collection_age_seconds > 660
+        for: 2m
+        labels: {severity: critical}
+      - alert: CheckerFailed
+        expr: sync_checker_success == 0
+        for: 5m
+        labels: {severity: warning}
+      - alert: CheckerStorageFailed
+        expr: sync_checker_storage_success == 0
+        for: 5m
+        labels: {severity: warning}

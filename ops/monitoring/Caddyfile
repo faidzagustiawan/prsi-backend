@@ -1,0 +1,9 @@
+{
+  admin 127.0.0.1:2019
+}
+monitor.faidz.fun {
+  reverse_proxy 127.0.0.1:3000
+}
+ntfy.faidz.fun {
+  reverse_proxy 127.0.0.1:8085
+}

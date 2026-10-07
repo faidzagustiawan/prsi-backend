@@ -22,7 +22,7 @@ vi.mock('../src/config/env.js', () => ({
   },
   JWT_AUDIENCE: 'podorukun-si', JWT_ISSUER: 'podorukun-si-api',
 }));
-vi.mock('../src/config/database.js', () => ({ db: {}, reportDb: {}, sessionClient: {} }));
+vi.mock('../src/config/database.js', () => ({ db: {}, reportDb: {}, reportClient: {}, sessionClient: {} }));
 
 const { buildApp } = await import('../src/app.js');
 let app;

@@ -1,0 +1,82 @@
+name: prsi-monitoring
+x-base: &base
+  restart: unless-stopped
+  network_mode: host
+  security_opt: [no-new-privileges:true]
+  logging:
+    driver: json-file
+    options: {max-size: 5m, max-file: '2'}
+services:
+  prometheus:
+    <<: *base
+    image: prom/prometheus:v3.5.0
+    mem_limit: 448m
+    user: '0:0'
+    command: ['--config.file=/etc/prometheus/prometheus.yml', '--storage.tsdb.path=/prometheus', '--storage.tsdb.retention.time=30d', '--storage.tsdb.retention.size=8GB', '--web.listen-address=127.0.0.1:9090']
+    volumes: ['./prometheus:/etc/prometheus:ro', 'prometheus:/prometheus', '/etc/prsi-monitoring/secrets:/run/secrets:ro']
+  alertmanager:
+    <<: *base
+    image: prom/alertmanager:v0.28.1
+    mem_limit: 64m
+    command: ['--config.file=/etc/alertmanager/config.yml', '--storage.path=/alertmanager', '--web.listen-address=127.0.0.1:9093', '--cluster.listen-address=']
+    volumes: ['./alertmanager.yml:/etc/alertmanager/config.yml:ro', 'alertmanager:/alertmanager']
+  grafana:
+    <<: *base
+    image: grafana/grafana:12.1.1
+    mem_limit: 320m
+    user: '0:0'
+    environment:
+      GF_SERVER_HTTP_ADDR: 127.0.0.1
+      GF_SERVER_ROOT_URL: https://monitor.faidz.fun
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana-password
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+      GF_USERS_DEFAULT_THEME: light
+      GF_DATE_FORMATS_DEFAULT_TIMEZONE: Asia/Jakarta
+      GF_ANALYTICS_REPORTING_ENABLED: 'false'
+      GF_ANALYTICS_CHECK_FOR_UPDATES: 'false'
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: 'false'
+      GF_SECURITY_COOKIE_SECURE: 'true'
+    volumes: ['grafana:/var/lib/grafana', './grafana/provisioning:/etc/grafana/provisioning:ro', './grafana/dashboards:/var/lib/grafana/dashboards:ro', '/etc/prsi-monitoring/secrets:/run/secrets:ro']
+  blackbox:
+    <<: *base
+    image: prom/blackbox-exporter:v0.26.0
+    mem_limit: 48m
+    command: ['--config.file=/config.yml', '--web.listen-address=127.0.0.1:9115']
+    volumes: ['./blackbox.yml:/config.yml:ro']
+  node:
+    <<: *base
+    image: prom/node-exporter:v1.9.1
+    mem_limit: 48m
+    pid: host
+    command: ['--path.rootfs=/host', '--web.listen-address=127.0.0.1:9100']
+    volumes: ['/:/host:ro,rslave']
+  checker:
+    <<: *base
+    image: node:22-alpine
+    mem_limit: 96m
+    read_only: true
+    command: [node, /app/server.mjs]
+    environment:
+      TRACK_CHECKSUM_URL: http://10.11.26.196:3201/sync/v2/checksum
+      PRSI_CHECKSUM_URL: http://10.11.26.196:9443/internal/checksum
+    volumes: ['./checker:/app:ro', '/etc/prsi-monitoring/secrets:/run/secrets:ro', 'checker-state:/state']
+  ntfy:
+    <<: *base
+    image: binwiederhier/ntfy:v2.14.0
+    mem_limit: 96m
+    command: [serve]
+    volumes: ['./ntfy.yml:/etc/ntfy/server.yml:ro', 'ntfy:/var/lib/ntfy']
+  caddy:
+    <<: *base
+    image: caddy:2.10.2
+    mem_limit: 96m
+    volumes: ['./Caddyfile:/etc/caddy/Caddyfile:ro', 'caddy-data:/data', 'caddy-config:/config']
+volumes:
+  checker-state:
+  prometheus:
+  alertmanager:
+  grafana:
+  ntfy:
+  caddy-data:
+  caddy-config:

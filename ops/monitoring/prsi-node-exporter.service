@@ -1,0 +1,19 @@
+[Unit]
+Description=PRSI private node exporter
+After=network-online.target
+Wants=network-online.target
+[Service]
+User=prsi-node-exporter
+Group=prsi-node-exporter
+ExecStart=/usr/local/bin/node_exporter --web.listen-address=10.11.26.196:9100 --collector.systemd --collector.systemd.unit-include=(podorukun-si-api|prtrack-staging-api)\.service
+Restart=on-failure
+MemoryMax=64M
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=10.11.20.216/32
+[Install]
+WantedBy=multi-user.target
