@@ -1,0 +1,191 @@
+{
+  "checked_at": "2026-10-07T06:54:00.447408+00:00",
+  "entities": [
+    {
+      "entity": "companies",
+      "track": {
+        "count": 4,
+        "hash": "d134e4dd132eefa83a6d95721396cc95",
+        "content_hash": "ac5d04ba4e009fc6130b8a60b1ac97d8",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 4,
+        "hash": "d134e4dd132eefa83a6d95721396cc95",
+        "content_hash": "ac5d04ba4e009fc6130b8a60b1ac97d8",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "projects",
+      "track": {
+        "count": 17,
+        "hash": "a85cbbd3f34aadaaeb2a81d3428e2c1e",
+        "content_hash": "90208ed8d9e06e88d895251b601a8492",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 17,
+        "hash": "a85cbbd3f34aadaaeb2a81d3428e2c1e",
+        "content_hash": "90208ed8d9e06e88d895251b601a8492",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "clusters",
+      "track": {
+        "count": 55,
+        "hash": "2a1778bb0e6533cb2ec12ea4783fef1f",
+        "content_hash": "3c7c03dac445673a3f7254a81b2ad76f",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 55,
+        "hash": "2a1778bb0e6533cb2ec12ea4783fef1f",
+        "content_hash": "3c7c03dac445673a3f7254a81b2ad76f",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "units",
+      "track": {
+        "count": 467,
+        "hash": "9f0fb109fef11dca406c50be9181503e",
+        "content_hash": "c185252caa0e8b20dea1eaea8e0e07b2",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 467,
+        "hash": "9f0fb109fef11dca406c50be9181503e",
+        "content_hash": "c185252caa0e8b20dea1eaea8e0e07b2",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "customers",
+      "track": {
+        "count": 512,
+        "hash": "6e7bf8e9c3ff7f059dcefd5c9529befb",
+        "content_hash": "b7a931deaf8cb7f16f4d71d7692803f0",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 512,
+        "hash": "6e7bf8e9c3ff7f059dcefd5c9529befb",
+        "content_hash": "b7a931deaf8cb7f16f4d71d7692803f0",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "assignments",
+      "track": {
+        "count": 281,
+        "hash": "349ab44ff5f1cf5a1522b89493b36b46",
+        "content_hash": "298a14f2a8da3df025da31b5904d1409",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 281,
+        "hash": "349ab44ff5f1cf5a1522b89493b36b46",
+        "content_hash": "298a14f2a8da3df025da31b5904d1409",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    },
+    {
+      "entity": "payments",
+      "track": {
+        "count": 1283,
+        "hash": "6204da766ab0469801a1cbe0c815b2d7",
+        "content_hash": "3cb1a10bb557f9576dc8f6a51d939e93",
+        "watermark": "889"
+      },
+      "prsi": {
+        "count": 1283,
+        "hash": "6204da766ab0469801a1cbe0c815b2d7",
+        "content_hash": "3cb1a10bb557f9576dc8f6a51d939e93",
+        "cursor": "847:185",
+        "held": false
+      },
+      "match": true
+    }
+  ],
+  "metrics": "monitor_collection_success 1\nmonitor_collection_age_seconds 286.37400007247925\naccounting_invariant_violations{invariant=\"journal_unbalanced\"} 0\naccounting_invariant_violations{invariant=\"trial_balance_unbalanced\"} 0\naccounting_invariant_violations{invariant=\"journal_after_period_closed\"} 0\naccounting_invariant_violations{invariant=\"payment_without_valid_journal\"} 0\naccounting_invariant_violations{invariant=\"allocation_exceeds_payment\"} 0\naccounting_invariant_violations{invariant=\"duplicate_payment_journal\"} 0\naccounting_invariant_violations{invariant=\"review_older_than_seven_days\"} 0\naccounting_invariant_violations{invariant=\"mirror_companies\"} 0\naccounting_invariant_violations{invariant=\"mirror_projects\"} 0\naccounting_invariant_violations{invariant=\"mirror_clusters\"} 0\naccounting_invariant_violations{invariant=\"mirror_units\"} 0\naccounting_invariant_violations{invariant=\"mirror_customers\"} 0\naccounting_invariant_violations{invariant=\"mirror_assignments\"} 0\naccounting_invariant_violations{invariant=\"mirror_payments\"} 0\nsync_error_unresolved 0\noutbox_failed 0\nsync_held_seconds 0\nsync_last_cycle_age_seconds 161579.88800001144\nbackup_last_age_seconds 320.72900009155273\nbackup_timestamp_available 1\nsync_cursor_lag_seconds NaN\nsync_reconcile_mismatch_total{entity=\"companies\"} NaN\nsync_reconcile_mismatch_total{entity=\"projects\"} NaN\nsync_reconcile_mismatch_total{entity=\"clusters\"} NaN\nsync_reconcile_mismatch_total{entity=\"units\"} NaN\nsync_reconcile_mismatch_total{entity=\"customers\"} NaN\nsync_reconcile_mismatch_total{entity=\"assignments\"} NaN\nsync_reconcile_mismatch_total{entity=\"payments\"} NaN\n# TYPE api_requests_total counter\napi_requests_total 0\n# TYPE api_errors_5xx_total counter\napi_errors_5xx_total 0\n# TYPE api_request_duration_seconds histogram\napi_request_duration_seconds_bucket{le=\"0.01\"} 0\napi_request_duration_seconds_bucket{le=\"0.05\"} 0\napi_request_duration_seconds_bucket{le=\"0.1\"} 0\napi_request_duration_seconds_bucket{le=\"0.25\"} 0\napi_request_duration_seconds_bucket{le=\"0.5\"} 0\napi_request_duration_seconds_bucket{le=\"1\"} 0\napi_request_duration_seconds_bucket{le=\"2.5\"} 0\napi_request_duration_seconds_bucket{le=\"5\"} 0\napi_request_duration_seconds_bucket{le=\"10\"} 0\napi_request_duration_seconds_bucket{le=\"+Inf\"} 0\napi_request_duration_seconds_sum 0\napi_request_duration_seconds_count 0\n",
+  "checker": "sync_checker_storage_success 1\nsync_checker_success{entity=\"companies\"} 1\nsync_entity_match{entity=\"companies\"} 1\nsync_entity_pending{entity=\"companies\"} 0\nsync_entity_last_match_timestamp{entity=\"companies\"} 1791356012.298\nsync_entity_rows_track{entity=\"companies\"} 4\nsync_entity_rows_prsi{entity=\"companies\"} 4\nsync_cursor_lag_seconds{entity=\"companies\"} NaN\nsync_observed_difference_seconds{entity=\"companies\"} 0\nsync_reconcile_mismatch_total{entity=\"companies\"} 0\nsync_checker_success{entity=\"projects\"} 1\nsync_entity_match{entity=\"projects\"} 1\nsync_entity_pending{entity=\"projects\"} 0\nsync_entity_last_match_timestamp{entity=\"projects\"} 1791356012.319\nsync_entity_rows_track{entity=\"projects\"} 17\nsync_entity_rows_prsi{entity=\"projects\"} 17\nsync_cursor_lag_seconds{entity=\"projects\"} NaN\nsync_observed_difference_seconds{entity=\"projects\"} 0\nsync_reconcile_mismatch_total{entity=\"projects\"} 0\nsync_checker_success{entity=\"clusters\"} 1\nsync_entity_match{entity=\"clusters\"} 1\nsync_entity_pending{entity=\"clusters\"} 0\nsync_entity_last_match_timestamp{entity=\"clusters\"} 1791356012.343\nsync_entity_rows_track{entity=\"clusters\"} 55\nsync_entity_rows_prsi{entity=\"clusters\"} 55\nsync_cursor_lag_seconds{entity=\"clusters\"} NaN\nsync_observed_difference_seconds{entity=\"clusters\"} 0\nsync_reconcile_mismatch_total{entity=\"clusters\"} 0\nsync_checker_success{entity=\"units\"} 1\nsync_entity_match{entity=\"units\"} 1\nsync_entity_pending{entity=\"units\"} 0\nsync_entity_last_match_timestamp{entity=\"units\"} 1791356012.376\nsync_entity_rows_track{entity=\"units\"} 467\nsync_entity_rows_prsi{entity=\"units\"} 467\nsync_cursor_lag_seconds{entity=\"units\"} NaN\nsync_observed_difference_seconds{entity=\"units\"} 0\nsync_reconcile_mismatch_total{entity=\"units\"} 0\nsync_checker_success{entity=\"customers\"} 1\nsync_entity_match{entity=\"customers\"} 1\nsync_entity_pending{entity=\"customers\"} 0\nsync_entity_last_match_timestamp{entity=\"customers\"} 1791356012.407\nsync_entity_rows_track{entity=\"customers\"} 512\nsync_entity_rows_prsi{entity=\"customers\"} 512\nsync_cursor_lag_seconds{entity=\"customers\"} NaN\nsync_observed_difference_seconds{entity=\"customers\"} 0\nsync_reconcile_mismatch_total{entity=\"customers\"} 0\nsync_checker_success{entity=\"assignments\"} 1\nsync_entity_match{entity=\"assignments\"} 1\nsync_entity_pending{entity=\"assignments\"} 0\nsync_entity_last_match_timestamp{entity=\"assignments\"} 1791356012.437\nsync_entity_rows_track{entity=\"assignments\"} 281\nsync_entity_rows_prsi{entity=\"assignments\"} 281\nsync_cursor_lag_seconds{entity=\"assignments\"} NaN\nsync_observed_difference_seconds{entity=\"assignments\"} 0\nsync_reconcile_mismatch_total{entity=\"assignments\"} 0\nsync_checker_success{entity=\"payments\"} 1\nsync_entity_match{entity=\"payments\"} 1\nsync_entity_pending{entity=\"payments\"} 0\nsync_entity_last_match_timestamp{entity=\"payments\"} 1791356012.486\nsync_entity_rows_track{entity=\"payments\"} 1283\nsync_entity_rows_prsi{entity=\"payments\"} 1283\nsync_cursor_lag_seconds{entity=\"payments\"} NaN\nsync_observed_difference_seconds{entity=\"payments\"} 0\nsync_reconcile_mismatch_total{entity=\"payments\"} 0\n",
+  "targets": [
+    {
+      "job": "blackbox",
+      "instance": "https://podorukunsi.my.id/health",
+      "health": "up"
+    },
+    {
+      "job": "blackbox",
+      "instance": "http://10.11.26.196:3201/health",
+      "health": "up"
+    },
+    {
+      "job": "node",
+      "instance": "127.0.0.1:9100",
+      "health": "up"
+    },
+    {
+      "job": "node",
+      "instance": "10.11.26.196:9100",
+      "health": "up"
+    },
+    {
+      "job": "prometheus",
+      "instance": "127.0.0.1:9090",
+      "health": "up"
+    },
+    {
+      "job": "prsi",
+      "instance": "10.11.26.196:9443",
+      "health": "unknown"
+    },
+    {
+      "job": "sync-checker",
+      "instance": "127.0.0.1:9199",
+      "health": "up"
+    }
+  ],
+  "probes": [
+    {
+      "metric": {
+        "__name__": "probe_success",
+        "instance": "https://podorukunsi.my.id/health",
+        "job": "blackbox"
+      },
+      "value": [
+        1791356040.736,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "probe_success",
+        "instance": "http://10.11.26.196:3201/health",
+        "job": "blackbox"
+      },
+      "value": [
+        1791356040.736,
+        "1"
+      ]
+    }
+  ],
+  "alerts": [],
+  "memory": "               total        used        free      shared  buff/cache   available\nMem:            1967         701         136           2        1323        1266\nSwap:           1987          89        1898\n",
+  "disk": "Filesystem      Size  Used Avail Use% Mounted on\n/dev/vda2        40G  9.4G   29G  25% /\n",
+  "containers": "prsi-monitoring-caddy-1 11.1MiB / 96MiB\nprsi-monitoring-grafana-1 83.42MiB / 320MiB\nprsi-monitoring-checker-1 14.66MiB / 96MiB\nprsi-monitoring-prometheus-1 32.38MiB / 448MiB\nprsi-monitoring-alertmanager-1 15.43MiB / 64MiB\nprsi-monitoring-ntfy-1 12.25MiB / 96MiB\nprsi-monitoring-node-1 5.848MiB / 48MiB\nprsi-monitoring-blackbox-1 7.867MiB / 48MiB\n"
+}

@@ -1,0 +1,67 @@
+{
+  "checked_at": "2026-10-07T07:23:38.920534+00:00",
+  "targets": [
+    {
+      "job": "blackbox",
+      "instance": "https://podorukunsi.my.id/health",
+      "health": "up"
+    },
+    {
+      "job": "blackbox",
+      "instance": "http://10.11.26.196:3201/health",
+      "health": "up"
+    },
+    {
+      "job": "node",
+      "instance": "127.0.0.1:9100",
+      "health": "up"
+    },
+    {
+      "job": "node",
+      "instance": "10.11.26.196:9100",
+      "health": "up"
+    },
+    {
+      "job": "prometheus",
+      "instance": "127.0.0.1:9090",
+      "health": "up"
+    },
+    {
+      "job": "prsi",
+      "instance": "10.11.26.196:9443",
+      "health": "up"
+    },
+    {
+      "job": "sync-checker",
+      "instance": "127.0.0.1:9199",
+      "health": "up"
+    }
+  ],
+  "metrics": "monitor_collection_success 1\nmonitor_collection_age_seconds 215.7039999961853\naccounting_invariant_violations{invariant=\"journal_unbalanced\"} 0\naccounting_invariant_violations{invariant=\"trial_balance_unbalanced\"} 0\naccounting_invariant_violations{invariant=\"journal_after_period_closed\"} 0\naccounting_invariant_violations{invariant=\"payment_without_valid_journal\"} 0\naccounting_invariant_violations{invariant=\"allocation_exceeds_payment\"} 0\naccounting_invariant_violations{invariant=\"duplicate_payment_journal\"} 0\naccounting_invariant_violations{invariant=\"review_older_than_seven_days\"} 0\naccounting_invariant_violations{invariant=\"mirror_companies\"} 0\naccounting_invariant_violations{invariant=\"mirror_projects\"} 0\naccounting_invariant_violations{invariant=\"mirror_clusters\"} 0\naccounting_invariant_violations{invariant=\"mirror_units\"} 0\naccounting_invariant_violations{invariant=\"mirror_customers\"} 0\naccounting_invariant_violations{invariant=\"mirror_assignments\"} 0\naccounting_invariant_violations{invariant=\"mirror_payments\"} 0\nsync_error_unresolved 0\noutbox_failed 0\nsync_held_seconds 0\nsync_last_cycle_age_seconds 163358.11800003052\nbackup_last_age_seconds 1527.9590001106262\nbackup_timestamp_available 1\nsync_cursor_lag_seconds NaN\nsync_reconcile_mismatch_total{entity=\"companies\"} NaN\nsync_reconcile_mismatch_total{entity=\"projects\"} NaN\nsync_reconcile_mismatch_total{entity=\"clusters\"} NaN\nsync_reconcile_mismatch_total{entity=\"units\"} NaN\nsync_reconcile_mismatch_total{entity=\"customers\"} NaN\nsync_reconcile_mismatch_total{entity=\"assignments\"} NaN\nsync_reconcile_mismatch_total{entity=\"payments\"} NaN\n# TYPE api_requests_total counter\napi_requests_total 3\n# TYPE api_errors_5xx_total counter\napi_errors_5xx_total 0\n# TYPE api_request_duration_seconds histogram\napi_request_duration_seconds_bucket{le=\"0.01\"} 3\napi_request_duration_seconds_bucket{le=\"0.05\"} 3\napi_request_duration_seconds_bucket{le=\"0.1\"} 3\napi_request_duration_seconds_bucket{le=\"0.25\"} 3\napi_request_duration_seconds_bucket{le=\"0.5\"} 3\napi_request_duration_seconds_bucket{le=\"1\"} 3\napi_request_duration_seconds_bucket{le=\"2.5\"} 3\napi_request_duration_seconds_bucket{le=\"5\"} 3\napi_request_duration_seconds_bucket{le=\"10\"} 3\napi_request_duration_seconds_bucket{le=\"+Inf\"} 3\napi_request_duration_seconds_sum 0.003467657999994117\napi_request_duration_seconds_count 3\n",
+  "checker": "sync_checker_storage_success 1\nsync_checker_success{entity=\"companies\"} 1\nsync_entity_match{entity=\"companies\"} 1\nsync_entity_pending{entity=\"companies\"} 0\nsync_entity_last_match_timestamp{entity=\"companies\"} 1791357812.515\nsync_entity_rows_track{entity=\"companies\"} 4\nsync_entity_rows_prsi{entity=\"companies\"} 4\nsync_cursor_lag_seconds{entity=\"companies\"} NaN\nsync_observed_difference_seconds{entity=\"companies\"} 0\nsync_reconcile_mismatch_total{entity=\"companies\"} 0\nsync_checker_success{entity=\"projects\"} 1\nsync_entity_match{entity=\"projects\"} 1\nsync_entity_pending{entity=\"projects\"} 0\nsync_entity_last_match_timestamp{entity=\"projects\"} 1791357812.53\nsync_entity_rows_track{entity=\"projects\"} 17\nsync_entity_rows_prsi{entity=\"projects\"} 17\nsync_cursor_lag_seconds{entity=\"projects\"} NaN\nsync_observed_difference_seconds{entity=\"projects\"} 0\nsync_reconcile_mismatch_total{entity=\"projects\"} 0\nsync_checker_success{entity=\"clusters\"} 1\nsync_entity_match{entity=\"clusters\"} 1\nsync_entity_pending{entity=\"clusters\"} 0\nsync_entity_last_match_timestamp{entity=\"clusters\"} 1791357812.545\nsync_entity_rows_track{entity=\"clusters\"} 55\nsync_entity_rows_prsi{entity=\"clusters\"} 55\nsync_cursor_lag_seconds{entity=\"clusters\"} NaN\nsync_observed_difference_seconds{entity=\"clusters\"} 0\nsync_reconcile_mismatch_total{entity=\"clusters\"} 0\nsync_checker_success{entity=\"units\"} 1\nsync_entity_match{entity=\"units\"} 1\nsync_entity_pending{entity=\"units\"} 0\nsync_entity_last_match_timestamp{entity=\"units\"} 1791357812.569\nsync_entity_rows_track{entity=\"units\"} 467\nsync_entity_rows_prsi{entity=\"units\"} 467\nsync_cursor_lag_seconds{entity=\"units\"} NaN\nsync_observed_difference_seconds{entity=\"units\"} 0\nsync_reconcile_mismatch_total{entity=\"units\"} 0\nsync_checker_success{entity=\"customers\"} 1\nsync_entity_match{entity=\"customers\"} 1\nsync_entity_pending{entity=\"customers\"} 0\nsync_entity_last_match_timestamp{entity=\"customers\"} 1791357812.591\nsync_entity_rows_track{entity=\"customers\"} 512\nsync_entity_rows_prsi{entity=\"customers\"} 512\nsync_cursor_lag_seconds{entity=\"customers\"} NaN\nsync_observed_difference_seconds{entity=\"customers\"} 0\nsync_reconcile_mismatch_total{entity=\"customers\"} 0\nsync_checker_success{entity=\"assignments\"} 1\nsync_entity_match{entity=\"assignments\"} 1\nsync_entity_pending{entity=\"assignments\"} 0\nsync_entity_last_match_timestamp{entity=\"assignments\"} 1791357812.613\nsync_entity_rows_track{entity=\"assignments\"} 281\nsync_entity_rows_prsi{entity=\"assignments\"} 281\nsync_cursor_lag_seconds{entity=\"assignments\"} NaN\nsync_observed_difference_seconds{entity=\"assignments\"} 0\nsync_reconcile_mismatch_total{entity=\"assignments\"} 0\nsync_checker_success{entity=\"payments\"} 1\nsync_entity_match{entity=\"payments\"} 1\nsync_entity_pending{entity=\"payments\"} 0\nsync_entity_last_match_timestamp{entity=\"payments\"} 1791357812.657\nsync_entity_rows_track{entity=\"payments\"} 1283\nsync_entity_rows_prsi{entity=\"payments\"} 1283\nsync_cursor_lag_seconds{entity=\"payments\"} NaN\nsync_observed_difference_seconds{entity=\"payments\"} 0\nsync_reconcile_mismatch_total{entity=\"payments\"} 0\n",
+  "probes": [
+    {
+      "metric": {
+        "__name__": "probe_success",
+        "instance": "https://podorukunsi.my.id/health",
+        "job": "blackbox"
+      },
+      "value": [
+        1791357818.961,
+        "1"
+      ]
+    },
+    {
+      "metric": {
+        "__name__": "probe_success",
+        "instance": "http://10.11.26.196:3201/health",
+        "job": "blackbox"
+      },
+      "value": [
+        1791357818.961,
+        "1"
+      ]
+    }
+  ],
+  "alerts": []
+}

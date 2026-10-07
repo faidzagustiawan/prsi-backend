@@ -1,4 +1,38 @@
-# PRSI monitoring — status 5 Oktober 2026
+# PRSI monitoring
+
+## Status terbaru — 7 Oktober 2026
+
+PR #5 di-merge pemilik pada 06:40:53 UTC. Rilis backend `dd3610d` (main, termasuk PR #6 CORS/Bearer yang sudah aktif sebelumnya) sudah dipasang dengan backup finance, smoke port3199, swap, smoke port3100, dan pemeriksaan domain publik. Tidak ada migrasi, sinkronisasi satu kali, atau worker baru.
+
+- Ketujuh entitas cocok pada count, hash versi, dan content_hash. Seluruh 14 gauge invariant bernilai 0, collection_success=1, sync_error=0, outbox_failed=0. Ini bukti Track **staging** versus mirror PRSI pada waktu pengamatan, bukan monitoring Track production.
+- Token kosong/salah mendapat 401, token benar 200 lewat listener privat. Public `/internal`, `/internal/metrics`, `/internal/checksum/companies` mendapat 404; health/OpenAPI publik 200 dari Windows. Probe Python dari VPS aplikasi mendapat 403 Cloudflare untuk semua path termasuk health; hasil tersebut tidak dipakai sebagai bukti penolakan nginx.
+- Bind privat saja ternyata tidak memblokir NAT IP publik Tencent: 9443 sempat menerima koneksi dan nginx memberi 403. Kini aturan INPUT khusus 9443 hanya menerima sumber 10.11.20.216. Uji ulang seluruh port internal dari Windows tidak berhasil terhubung. SSH/API dan kebijakan firewall lainnya tidak diubah. Unit `prsi-ops-firewall` memasang aturan sebelum nginx pada boot.
+- Checker hanya menetapkan mismatch isi jika jumlah dan hash versi cocok, sumber stabil, tidak held, dan beda isi terjadi tiga kali. Perbedaan versi/jumlah tetap pending. `SyncLag` tidak lagi memakai umur siklus atau durasi perbedaan sebagai umur event. `SyncDifferenceObserved` memberi peringatan terpisah setelah perbedaan teramati >10 menit. Umur event sumber tetap tidak tersedia dari kontrak checksum.
+- Backup harian disetujui pemilik: timer `prsi-backup.timer`, 02:00 Asia/Jakarta + jitter maksimum lima menit, retensi tujuh hari. Arsip root-only di `/var/backups/podorukun-si/daily/` berisi finance.dump, lampiran, environment dan konfigurasi nginx/job; SHA256SUMS dan COMPLETE hanya setelah validasi. Keberhasilan memperbarui `/var/lib/prsi-monitoring/backup.timestamp` (root:podorukun-si,0640). File ini menjadi PRSI_BACKUP_TIMESTAMP_FILE. Dua backup awal berhasil; terakhir `20261007T065811Z`. Backup lokal VPS ini belum merupakan salinan disaster recovery di host lain.
+- Pembaruan stack pertama rollback otomatis; konfigurasi lama kembali sehat. Readiness Grafana sekarang memakai retry seperti Prometheus/Alertmanager, ditambah checker/ntfy. Pembaruan berikutnya berhasil. Backup stack `/var/backups/prsi-monitoring/20261007T065030Z`; konfigurasi sebelumnya `/opt/prsi-monitoring.prev-20261007T065328Z`.
+- RAM VPS saat sampel: 701/1967 MiB, available1266 MiB; delapan container sekitar183 MiB, limit total1216 MiB. Disk9.4/40GB (25%). Loki/Alloy tetap fase2.
+
+Backup backend pertama `/var/backups/podorukun-si/pre-monitoring-20261007T064544Z`; rilis sebelumnya `/opt/podorukun-si/app.prev-20261007T064544Z`. Aktivasi timestamp backup juga melalui deployment aman, backup `/var/backups/podorukun-si/pre-monitoring-20261007T064905Z`, previous `/opt/podorukun-si/app.prev-20261007T064905Z`. Backup nginx sebelum penolakan publik `/var/backups/podorukun-si/internal-deny-20261007T064309Z`. Pertahankan penolakan publik saat rollback.
+
+Rollback rilis terakhir (dijalankan hanya bila diperlukan; tidak mengembalikan database):
+
+```sh
+sudo bash -c 'set -e; cd /opt/podorukun-si; test ! -e app.failed-manual-20261007; mv app app.failed-manual-20261007; mv app.prev-20261007T064905Z app; systemctl restart podorukun-si-api; curl --fail --max-time 15 http://127.0.0.1:3100/health'
+```
+
+Untuk kembali ke rilis sebelum monitoring gunakan previous `064544Z`, lalu verifikasi health; listener tetap tertutup publik. Skrip deploy mempunyai rollback otomatis bila health/smoke pascaswap gagal. Jalur gagal backend belum sengaja dipicu pada produksi; rollback stack monitoring benar-benar teramati. Restore finance ke database aktif tidak dilakukan. Arsip lolos pg_restore --list dan hash; uji restore terisolasi penuh masih diperlukan sebelum mengklaim disaster recovery tervalidasi.
+
+Validasi kode: 55 tes non-DB lulus, lint0 error/31 warning lama, db:check6 migrasi aman. Pengulangan tiga tes DB/vectors terhalang ECONNREFUSED localhost:5433: PostgreSQL Windows berhenti dan akun sesi tidak punya hak menyalakan service. Fixture tidak diubah (SHA256 tetap 474c7a7a23997417bf7df93ce5a1ba107e848707927207218fdc048a822f5ea2); kelulusan57 tes pada5 Oktober tetap bukti historis, bukan hasil ulang hari ini.
+
+Dashboard diprovisi dan query data nyata terverifikasi lewat API. Screenshot baru terhalang runtime browser: `windows sandbox failed: setup refresh had errors`; screenshot5 Oktober tetap tersedia dan tidak dianggap tampilan setelah deploy. Notifikasi FIRING/RESOLVED dan restore SQLite memakai bukti pengujian5 Oktober; tidak diulang tanpa kebutuhan. Pemilik belum mengetahui mode SSL zona faidz.fun: perlu cek **SSL/TLS → Overview → Full (strict)**, tanpa perubahan otomatis oleh sesi ini.
+
+Langganan HP: tambahkan server `https://ntfy.faidz.fun` di aplikasi ntfy, login `owner` memakai password root-only di `/etc/prsi-monitoring/secrets/ntfy-password`, lalu subscribe topik `prsi-alerts`. Grafana login `admin`, password `/etc/prsi-monitoring/secrets/grafana-password`. Jangan menyalin password ke chat.
+
+Bukti baru: `docs/deploy/evidence/monitoring-20261007/`. Verifikasi akhir menunjukkan tujuh target up, dua probe_success=1, tujuh checker match=1, dan tidak ada alert aktif. Sebelum verifikasi akhir, API ditemukan inactive dengan lifecycle stop normal (15:00:27 waktu server/CST); kemudian pulih. Log juga mencatat stop/start singkat15:10. Penyebab penghentian belum teratribusi; bukan bukti crash atau gagal query. Service dipastikan berjalan kembali dan monitoring menangkap kondisi gagal. Jangan menyimpulkan stabilitas jangka panjang hanya dari sampel akhir ini.
+
+Infrastruktur dan perbandingan staging telah aktif; konfirmasi Cloudflare, screenshot terbaru, pengulangan tes DB lokal, penelusuran penghentian API, dan latihan restore penuh masih terbuka. Tidak ada izin cutover Track production.
+
+## Catatan historis — 5 Oktober 2026
 
 Branch `codex/integrity-monitoring`, base `5c40db5`. Backend baru belum dipasang: pemilik yang merge, deployment hanya setelah merge. Track production, frontend, Cloudflare zone, dan worker permanen tidak diubah.
 
@@ -31,7 +65,7 @@ Track memberi `{count,hash,content_hash,watermark}`; PRSI memberi `{count,hash,c
 
 Watermark xmin Track bukan cursor event terakhir. Checker tidak membandingkannya dengan cursor PRSI dan tidak mengarang status held Track. `sync_cursor_lag_seconds` tetap NaN karena umur/posisi sumber tidak tersedia. `sync_observed_difference_seconds` adalah lama perbedaan yang teramati, bukan umur event.
 
-`sync_entity_match`: 1 = count/content_hash cocok saat pengamatan; -1 = pending/unknown; 0 = tiga pengamatan berbeda berurutan dengan sumber stabil dan PRSI tidak held. Nilai 0 belum membuktikan korupsi: worker bisa tertinggal atau sengaja mati. Kegagalan fetch mereset streak. Perubahan watermark saja tidak mereset streak karena transaksi unrelated juga memajukan xmin. Counter kejadian mismatch dan waktu match terakhir disimpan atomik dalam volume `checker-state`; setelah restart tetap perlu sampel baru. State rusak dipertahankan dan memicu `sync_checker_storage_success=0`.
+`sync_entity_match`: 1 = count/content_hash cocok saat pengamatan; -1 = pending/unknown; 0 = tiga pengamatan isi berbeda berurutan dengan sumber stabil, jumlah dan hash id:version sama, serta PRSI tidak held. Bila versi/jumlah berbeda atau hash versi tidak tersedia, status tetap pending karena lag belum dapat dikesampingkan. Nilai 0 bukan pembuktian matematis korupsi. Kegagalan fetch mereset streak. Perubahan watermark saja tidak mereset streak karena transaksi unrelated juga memajukan xmin. Counter kejadian mismatch dan waktu match terakhir disimpan atomik dalam volume `checker-state`; setelah restart tetap perlu sampel baru. State rusak dipertahankan dan memicu `sync_checker_storage_success=0`.
 
 Hash versi disediakan untuk diagnosis; kecocokan isi tidak mensyaratkan versi sama. Hash tujuh request bukan snapshot global. MD5/pemisah tanpa escaping/sentinel null mengikuti kontrak bersama dan tidak membuktikan kesamaan matematis mutlak. Jangan mengganti fixture atau encoding sepihak.
 

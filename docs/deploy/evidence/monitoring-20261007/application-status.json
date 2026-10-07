@@ -1,0 +1,16 @@
+{
+  "gates": {
+    "ALLOW_UNSAFE_DB_ROLE": "false",
+    "SYNC_ENABLED": "false",
+    "SYNC_WRITE_ENABLED": "false"
+  },
+  "public": {
+    "/internal": 403,
+    "/internal/metrics": 403,
+    "/internal/checksum/companies": 403,
+    "/health": 403,
+    "/openapi.json": 403
+  },
+  "worker_state": "inactive",
+  "backup_timestamp": 1791355720
+}

@@ -1,0 +1,36 @@
+{
+  "dashboard_uid": "prsi-monitoring",
+  "panels": [
+    "Ringkasan",
+    "Semua target dapat di-scrape",
+    "Integritas tersedia dan tanpa pelanggaran",
+    "Tujuh entitas cocok \u2014 pending/unknown bukan sehat",
+    "Uptime dan host",
+    "Health API publik dan Track staging",
+    "Uptime host (detik)",
+    "RAM terpakai (rasio)",
+    "Disk terpakai (rasio)",
+    "Service backend aktif",
+    "API",
+    "Request per detik",
+    "Error 5xx per detik",
+    "Latensi p95 (detik)",
+    "Sinkronisasi Track \u2194 PRSI",
+    "Status entitas: 1 cocok, 0 mismatch, -1 pending",
+    "Jumlah baris Track",
+    "Jumlah baris PRSI",
+    "Umur siklus terakhir / held / beda teramati",
+    "Galat sinkron belum selesai",
+    "Integritas pembukuan",
+    "Jumlah pelanggaran \u2014 target 0",
+    "Umur cache pemeriksaan (detik)",
+    "Backup",
+    "Umur backup (detik) \u2014 batas 93600",
+    "Bukti backup tersedia"
+  ],
+  "private_auth": {
+    "missing": 401,
+    "wrong": 401,
+    "valid": 200
+  }
+}

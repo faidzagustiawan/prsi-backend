@@ -1,0 +1,57 @@
+[
+  {
+    "port": 3100,
+    "reachable": false,
+    "host": "43.173.11.71"
+  },
+  {
+    "port": 3201,
+    "reachable": false,
+    "host": "43.173.11.71"
+  },
+  {
+    "port": 9100,
+    "reachable": false,
+    "host": "43.173.11.71"
+  },
+  {
+    "port": 9443,
+    "reachable": true,
+    "host": "43.173.11.71"
+  },
+  {
+    "port": 3000,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 8085,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 9090,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 9093,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 9100,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 9115,
+    "reachable": false,
+    "host": "43.157.230.218"
+  },
+  {
+    "port": 9199,
+    "reachable": false,
+    "host": "43.157.230.218"
+  }
+]

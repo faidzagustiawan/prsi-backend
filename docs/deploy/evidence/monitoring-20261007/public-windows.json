@@ -1,0 +1,7 @@
+{
+  "/internal/metrics": "404",
+  "/openapi.json": "200",
+  "/internal/checksum/companies": "404",
+  "/internal": "404",
+  "/health": "200"
+}
