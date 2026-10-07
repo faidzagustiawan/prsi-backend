@@ -14,7 +14,11 @@ groups:
         for: 5m
         labels: {severity: warning}
       - alert: SyncLag
-        expr: sync_observed_difference_seconds > 600 or sync_held_seconds > 600 or sync_last_cycle_age_seconds > 600
+        expr: sync_cursor_lag_seconds > 600 or sync_held_seconds > 600
+        for: 2m
+        labels: {severity: warning}
+      - alert: SyncDifferenceObserved
+        expr: sync_observed_difference_seconds > 600
         for: 2m
         labels: {severity: warning}
       - alert: SyncError

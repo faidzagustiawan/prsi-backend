@@ -52,7 +52,7 @@ function metrics() {
   }
   return lines.join('\n')+'\n';
 }
-const alertNames = new Set(['ApiDown','High5xx','DiskHigh','SyncLag','SyncError','EntityMismatch','InvariantViolation','BackupOld','BackupUnknown','ScrapeMissing','CollectorFailed','CheckerFailed','MonitoringTest','CheckerStorageFailed']);
+const alertNames = new Set(['ApiDown','High5xx','DiskHigh','SyncLag','SyncDifferenceObserved','SyncError','EntityMismatch','InvariantViolation','BackupOld','BackupUnknown','ScrapeMissing','CollectorFailed','CheckerFailed','MonitoringTest','CheckerStorageFailed']);
 const server = http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/metrics') { res.writeHead(200, {'Content-Type':'text/plain; version=0.0.4'}); return res.end(metrics()); }
   if (req.method !== 'POST' || req.url !== '/alerts') { res.writeHead(404); return res.end(); }

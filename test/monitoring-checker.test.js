@@ -1,14 +1,23 @@
 import { it, expect } from 'vitest';
 import { advance } from '../ops/monitoring/checker/state.mjs';
-const track = { count: 1, content_hash: 'a'.repeat(32), watermark: '9007199254740993' };
-const mirror = { count: 1, content_hash: 'b'.repeat(32), cursor: '4:8', held: false };
-it('reports a persistent observed difference after three stable-source samples without inventing a source cursor', () => {
+const track = { count: 1, hash: 'd'.repeat(32), content_hash: 'a'.repeat(32), watermark: '9007199254740993' };
+const mirror = { count: 1, hash: track.hash, content_hash: 'b'.repeat(32), cursor: '4:8', held: false };
+it('reports content drift after three stable samples with matching versions', () => {
   let state;
   for (let i=1;i<=3;i++) { state=advance(state,track,mirror,100+i); expect(state.match).toBe(i===3?0:-1); }
   expect(state.mismatches).toBe(1);
   expect(state.differenceSince).toBe(101);
   expect(advance(state,track,mirror,104).mismatches).toBe(1);
   expect(advance(state,track,{...mirror,content_hash:track.content_hash},105).match).toBe(1);
+});
+it('keeps possible lag pending even when the source remains stable', () => {
+  for (const changed of [{count: 0}, {hash: 'e'.repeat(32)}, {hash: undefined}]) {
+    let state;
+    for (let i=0;i<5;i++) state=advance(state,track,{...mirror,...changed},100+i);
+    expect(state.match).toBe(-1);
+    expect(state.pending).toBe(true);
+    expect(state.mismatches).toBe(0);
+  }
 });
 it('resets streak on source change or held state; xmin advancement alone does not imply drift', () => {
   const state=advance(undefined,track,mirror,100);

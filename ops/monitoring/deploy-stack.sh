@@ -33,13 +33,12 @@ cd "$active"
 docker compose up -d --force-recreate
 # A deterministic failure hook is restricted to this monitoring host, for rollback rehearsal.
 if [ "${MONITOR_ROLLBACK_TEST:-false}" = true ]; then false; fi
-for port in 9090 9093; do
+for endpoint in '9090/-/ready' '9093/-/ready' '3000/api/health' '9199/metrics' '8085/v1/health'; do
   ready=false
   for attempt in $(seq 1 30); do
-    if curl --silent --fail --max-time 2 "http://127.0.0.1:$port/-/ready" >/dev/null; then ready=true; break; fi
+    if curl --silent --fail --max-time 2 "http://127.0.0.1:$endpoint" >/dev/null; then ready=true; break; fi
     sleep 1
   done
   test "$ready" = true
 done
-curl --silent --fail --max-time 10 http://127.0.0.1:3000/api/health >/dev/null
 printf 'Previous configuration: %s\n' "$previous"
