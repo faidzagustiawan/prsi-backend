@@ -4,6 +4,7 @@ import { ACCESS_COOKIE, REFRESH_COOKIE } from '../../plugins/auth.js';
 import { recordAudit, AuditAction } from '../../shared/utils/audit.js';
 
 const secure = process.env.NODE_ENV !== 'development';
+const ACCESS_TTL_SEC = 15 * 60;
 
 // Refresh token hanya dikirim browser ke endpoint auth, tidak ke seluruh API.
 const REFRESH_PATH = '/api/v1/auth';
@@ -14,7 +15,7 @@ const setAuthCookies = (reply, tokens) => {
     httpOnly: true,
     secure,
     sameSite: 'strict',
-    maxAge: 15 * 60,
+    maxAge: ACCESS_TTL_SEC,
   });
   reply.setCookie(REFRESH_COOKIE, tokens.refreshToken, {
     path: REFRESH_PATH,
@@ -24,6 +25,19 @@ const setAuthCookies = (reply, tokens) => {
     maxAge: service.REFRESH_TTL_SEC,
   });
 };
+
+// Klien lintas situs (mis. frontend di localhost) tidak menerima cookie SameSite=Strict,
+// jadi token juga dikirim di body untuk dipakai sebagai Authorization: Bearer.
+const tokenBody = (tokens) => ({
+  user: tokens.user,
+  accessToken: tokens.accessToken,
+  refreshToken: tokens.refreshToken,
+  tokenType: 'Bearer',
+  expiresIn: ACCESS_TTL_SEC,
+});
+
+// Refresh token dari body (klien Bearer) atau cookie (klien sesitus)
+const refreshTokenFrom = (request) => request.body?.refreshToken || request.cookies?.[REFRESH_COOKIE];
 
 const clearAuthCookies = (reply) => {
   reply.clearCookie(ACCESS_COOKIE, { path: '/' });
@@ -44,15 +58,14 @@ export const loginHandler = async (request, reply) => {
     summary: `Login ${tokens.user.email}`,
   });
 
-  // Token hanya lewat cookie httpOnly, tidak dikirim di body
-  return reply.code(200).send({ success: true, message: 'Login berhasil', data: { user: tokens.user } });
+  return reply.code(200).send({ success: true, message: 'Login berhasil', data: tokenBody(tokens) });
 };
 
 export const refreshHandler = async (request, reply) => {
   try {
-    const tokens = await service.refreshSession(request.cookies?.[REFRESH_COOKIE], request.server);
+    const tokens = await service.refreshSession(refreshTokenFrom(request), request.server);
     setAuthCookies(reply, tokens);
-    return reply.code(200).send({ success: true, message: 'Sesi diperbarui', data: { user: tokens.user } });
+    return reply.code(200).send({ success: true, message: 'Sesi diperbarui', data: tokenBody(tokens) });
   } catch (error) {
     clearAuthCookies(reply);
     throw error;
@@ -60,7 +73,7 @@ export const refreshHandler = async (request, reply) => {
 };
 
 export const logoutHandler = async (request, reply) => {
-  await service.logoutUser(request.cookies?.[REFRESH_COOKIE]);
+  await service.logoutUser(refreshTokenFrom(request));
   clearAuthCookies(reply);
   return reply.code(200).send({ success: true, message: 'Logout berhasil' });
 };

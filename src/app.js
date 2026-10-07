@@ -57,6 +57,8 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
   await app.register(fastifyCors, {
     origin: (origin, cb) => {
       if (!origin) return cb(null, true);
+      // CORS_ALLOW_ALL=true: pantulkan origin apa pun (masa uji frontend, termasuk localhost)
+      if (env.corsAllowAll) return cb(null, true);
       if (env.frontendUrls.includes(origin)) return cb(null, true);
       if (env.isDevelopment && origin.startsWith('http://localhost:')) return cb(null, true);
       const err = new Error('Not allowed by CORS');

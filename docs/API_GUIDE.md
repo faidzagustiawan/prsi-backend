@@ -51,14 +51,27 @@ curl -b cookies.txt -c cookies.txt -X POST https://podorukunsi.my.id/api/v1/auth
 admin akan menerima `403` pada endpoint yang hanya mengizinkan keuangan.
 Daftar role aplikasi: admin, keuangan, teknisi, marketing, kontraktor.
 
-## CORS dan cookie lintas origin
+## CORS dan autentikasi lintas origin
 
-Origin frontend harus terdaftar pada konfigurasi backend. `credentials: 'include'`
-tidak melewati kebijakan CORS atau SameSite. Domain frontend eksternal belum
-dikonfirmasi; jangan menganggap request browser lintas situs sudah didukung.
-Scalar lokal adalah referensi baca dengan contoh kode dan unduhan OpenAPI;
-tombol uji browser dinonaktifkan agar tidak menyesatkan tentang cookie produksi.
-Gunakan cURL/klien API untuk mencoba produksi. Tidak ada proxy pihak ketiga.
+Selama masa uji, `CORS_ALLOW_ALL=true` di produksi: origin mana pun (termasuk
+`http://localhost:*`) diizinkan. Setelah domain frontend pasti, isi
+`FRONTEND_URL` dan kembalikan `CORS_ALLOW_ALL=false`.
+
+Cookie sesi memakai `SameSite=Strict`, sehingga browser tidak mengirimnya dari
+situs lain. Frontend lintas situs memakai token Bearer:
+
+1. `POST /api/v1/auth/login` mengembalikan `data.accessToken` (JWT, 15 menit),
+   `data.refreshToken` (7 hari, sekali pakai), `tokenType` dan `expiresIn`.
+2. Setiap request terautentikasi mengirim `Authorization: Bearer <accessToken>`.
+3. Bila menerima `401`, panggil `POST /api/v1/auth/refresh` dengan body
+   `{ "refreshToken": "..." }` satu kali, simpan kedua token baru, lalu ulangi
+   request. Refresh gagal berarti login ulang.
+4. `POST /api/v1/auth/logout` dengan body `{ "refreshToken": "..." }` mencabut sesi.
+
+Tidak perlu `credentials: 'include'`. Simpan token di memori bila memungkinkan;
+token di `localStorage` terbuka bagi XSS. Klien sesitus tetap dapat memakai
+cookie. Scalar lokal adalah referensi baca; gunakan cURL/klien API untuk
+mencoba produksi. Tidak ada proxy pihak ketiga.
 
 ## Format data
 
