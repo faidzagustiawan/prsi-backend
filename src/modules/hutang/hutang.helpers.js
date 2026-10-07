@@ -1,7 +1,7 @@
 // src/modules/hutang/hutang.helpers.js
 // Pencarian dan validasi bersama untuk modul hutang, pinjaman, dan kontrak.
 import { and, asc, eq, sql } from 'drizzle-orm';
-import { akun, kodePembantu } from '../../shared/schemas/akuntansi.schema.js';
+import { akun, kategoriHutangPiutang, kodePembantu } from '../../shared/schemas/akuntansi.schema.js';
 import { trkProjects, trkUnits } from '../../shared/schemas/track.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { generateKode } from '../kode-pembantu/kode-pembantu.routes.js';
@@ -10,13 +10,15 @@ const leaf = sql`NOT EXISTS (SELECT 1 FROM finance.akun c WHERE c.induk_id = ${a
 
 /**
  * Akun default untuk kategori hutang/piutang: akun detail aktif dengan
- * kategori_hutang_piutang tersebut, kode terkecil. `sisi` = 'hutang' (akun
+ * kategori hutang/piutang tersebut (kode kategori), kode akun terkecil. `sisi` = 'hutang' (akun
  * kategori hutang) atau 'aktiva' (piutang, mis. piutang antar proyek).
  */
 export async function akunUntukKategori(tx, kategoriHp, sisi = 'hutang') {
-  const [row] = await tx.select().from(akun)
-    .where(and(eq(akun.kategoriHutangPiutang, kategoriHp), eq(akun.kategori, sisi), eq(akun.aktif, true), leaf))
+  const [found] = await tx.select({ akun }).from(akun)
+    .innerJoin(kategoriHutangPiutang, eq(kategoriHutangPiutang.id, akun.kategoriHpId))
+    .where(and(eq(kategoriHutangPiutang.kode, kategoriHp), eq(akun.kategori, sisi), eq(akun.aktif, true), leaf))
     .orderBy(asc(akun.kode)).limit(1);
+  const row = found?.akun;
   if (!row) {
     const jenis = sisi === 'hutang' ? 'hutang' : 'piutang';
     throw new AppError(`Belum ada akun ${jenis} untuk kategori ${kategoriHp}. Tandai akunnya di COA (kategori hutang/piutang).`, 422);

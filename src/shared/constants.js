@@ -8,13 +8,8 @@ export const USER_STATUS = ['active', 'inactive'];
 export const KATEGORI_AKUN = ['aktiva', 'hutang', 'modal', 'pendapatan', 'beban', 'hpp'];
 export const KLASIFIKASI_AKUN = ['neraca', 'laba_rugi'];
 export const TIPE_SALDO = ['d', 'k'];
-export const KATEGORI_HUTANG_PIUTANG = [
-  'lahan', 'bank', 'antar_proyek', 'ppn', 'pihak_ketiga',
-  'pemegang_saham', 'karyawan', 'kontraktor', 'lain_lain',
-];
-
-// Kategori kode pembantu = kategori hutang/piutang + pihak penjualan
-export const KATEGORI_KODE_PEMBANTU = [...KATEGORI_HUTANG_PIUTANG, 'pembeli'];
+// Kategori hutang/piutang dan kategori kode pembantu ada di tabel
+// finance.kategori_hutang_piutang, bukan konstanta.
 
 export const JURNAL_STATUS = ['draft', 'diposting', 'dikoreksi', 'balik'];
 export const JURNAL_SUMBER = ['manual', 'pr_track', 'pinjaman', 'kontraktor', 'penjualan', 'mirror'];

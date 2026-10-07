@@ -43,6 +43,18 @@ export const masterPt = finance.table('master_pt', {
   ...timestamps(),
 });
 
+// Kategori hutang/piutang (ERD: kategori_hutang_piutang). Kategori baru cukup
+// ditambah sebagai baris. `kode` adalah slug yang dipakai aturan aplikasi
+// (mis. antar_proyek) dan kategori kode pembantu; prefix untuk nomor otomatis.
+export const kategoriHutangPiutang = finance.table('kategori_hutang_piutang', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  kode: varchar('kode', { length: 20 }).notNull().unique(),
+  nama: varchar('nama', { length: 100 }).notNull(),
+  prefixKodePembantu: varchar('prefix_kode_pembantu', { length: 4 }).notNull().unique(),
+  aktif: boolean('aktif').notNull().default(true),
+  ...timestamps(),
+});
+
 export const akun = finance.table('akun', {
   id: uuid('id').defaultRandom().primaryKey(),
   kode: varchar('kode', { length: 10 }).notNull().unique(),
@@ -51,20 +63,20 @@ export const akun = finance.table('akun', {
   kategori: varchar('kategori', { length: 12 }).notNull(),
   tipeSaldo: varchar('tipe_saldo', { length: 1 }).notNull(),
   klasifikasi: varchar('klasifikasi', { length: 10 }).notNull(),
-  kategoriHutangPiutang: varchar('kategori_hutang_piutang', { length: 20 }),
+  kategoriHpId: uuid('kategori_hp_id').references(() => kategoriHutangPiutang.id),
   wajibKodePembantu: boolean('wajib_kode_pembantu').notNull().default(false),
   wajibProyek: boolean('wajib_proyek').notNull().default(false),
   isKasBank: boolean('is_kas_bank').notNull().default(false),
   noRekening: varchar('no_rekening', { length: 30 }),
   aktif: boolean('aktif').notNull().default(true),
   ...timestamps(),
-}, (t) => [index('akun_induk_idx').on(t.indukId)]);
+}, (t) => [index('akun_induk_idx').on(t.indukId), index('akun_kategori_hp_idx').on(t.kategoriHpId)]);
 
 export const kodePembantu = finance.table('kode_pembantu', {
   id: uuid('id').defaultRandom().primaryKey(),
   kode: varchar('kode', { length: 20 }).notNull().unique(),
   nama: varchar('nama', { length: 150 }).notNull(),
-  kategori: varchar('kategori', { length: 20 }).notNull(),
+  kategori: varchar('kategori', { length: 20 }).notNull().references(() => kategoriHutangPiutang.kode),
   proyekId: uuid('proyek_id').references(() => trkProjects.id),
   customerId: uuid('customer_id').references(() => trkCustomers.id),
   // Kategori antar_proyek: proyek pihak lawan yang diwakili kode pembantu ini

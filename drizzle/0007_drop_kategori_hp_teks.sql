@@ -1,0 +1,1 @@
+ALTER TABLE "finance"."akun" DROP COLUMN "kategori_hutang_piutang";

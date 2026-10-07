@@ -9,7 +9,7 @@ export const openapiInfo = {
 };
 
 const createdPaths = new Set([
-  '/master-pt', '/akun', '/kode-pembantu', '/jurnal', '/jurnal/:id/balik',
+  '/master-pt', '/akun', '/kode-pembantu', '/kategori-hutang-piutang', '/jurnal', '/jurnal/:id/balik',
   '/lampiran', '/hutang/mutasi', '/pinjaman', '/pinjaman/:id/top-up',
   '/pinjaman/:id/pembayaran', '/kontrak', '/kontrak/:id/adendum',
   '/kontrak/:id/pembayaran', '/shm', '/pasal', '/template-dokumen',

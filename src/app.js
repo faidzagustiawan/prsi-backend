@@ -25,6 +25,7 @@ import proyekRoutes from './modules/proyek/proyek.routes.js';
 import masterPtRoutes from './modules/master-pt/master-pt.routes.js';
 import akunRoutes from './modules/akun/akun.routes.js';
 import kodePembantuRoutes from './modules/kode-pembantu/kode-pembantu.routes.js';
+import kategoriHpRoutes from './modules/kategori-hp/kategori-hp.routes.js';
 import saldoAwalRoutes from './modules/saldo-awal/saldo-awal.routes.js';
 import periodeRoutes from './modules/periode/periode.routes.js';
 import jurnalRoutes from './modules/jurnal/jurnal.routes.js';
@@ -118,6 +119,7 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
   await app.register(masterPtRoutes, { prefix: '/api/v1/master-pt' });
   await app.register(akunRoutes, { prefix: '/api/v1/akun' });
   await app.register(kodePembantuRoutes, { prefix: '/api/v1/kode-pembantu' });
+  await app.register(kategoriHpRoutes, { prefix: '/api/v1/kategori-hutang-piutang' });
   await app.register(saldoAwalRoutes, { prefix: '/api/v1/saldo-awal' });
   await app.register(periodeRoutes, { prefix: '/api/v1/periode' });
   await app.register(jurnalRoutes, { prefix: '/api/v1/jurnal' });

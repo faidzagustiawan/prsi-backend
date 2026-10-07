@@ -11,7 +11,7 @@ import { count } from 'drizzle-orm';
 import { db, closeDatabase } from '../src/config/database.js';
 import { env } from '../src/config/env.js';
 import { trkCompanies, trkProjects, trkClusters, trkUnits, trkCustomers, trkAssignments } from '../src/shared/schemas/track.schema.js';
-import { akun, kodePembantu, masterPt, akunSistem } from '../src/shared/schemas/akuntansi.schema.js';
+import { akun, kodePembantu, masterPt, akunSistem, kategoriHutangPiutang } from '../src/shared/schemas/akuntansi.schema.js';
 import { pasal, templateDokumen, templatePasal } from '../src/shared/schemas/penjualan.schema.js';
 import { trkPayments } from '../src/shared/schemas/track.schema.js';
 import { asc } from 'drizzle-orm';
@@ -27,7 +27,7 @@ const COA = [
   ['111010', 'Kas', 'aktiva', 'd', 'neraca', '110000', { isKasBank: true }],
   ['112010', 'Bank Mandiri', 'aktiva', 'd', 'neraca', '110000', { isKasBank: true, noRekening: '1230004567890' }],
   ['112020', 'Bank BRI', 'aktiva', 'd', 'neraca', '110000', { isKasBank: true, noRekening: '0021010012345' }],
-  ['113010', 'Piutang penjualan', 'aktiva', 'd', 'neraca', '110000', { wajibKodePembantu: true, wajibProyek: true }],
+  ['113010', 'Piutang penjualan', 'aktiva', 'd', 'neraca', '110000', { wajibKodePembantu: true, wajibProyek: true, kategoriHutangPiutang: 'pembeli' }],
   ['114010', 'Piutang antar proyek', 'aktiva', 'd', 'neraca', '110000', { wajibKodePembantu: true, kategoriHutangPiutang: 'antar_proyek' }],
   ['131010', 'Persediaan kavling', 'aktiva', 'd', 'neraca', '110000', { wajibProyek: true }],
   ['210000', 'Hutang', 'hutang', 'k', 'neraca'],
@@ -159,10 +159,13 @@ try {
         pekerjaan: 'Direktur', alamat: 'Jl. Pemuda No. 12, Surabaya', noKtp: '3578054807800003', proyekId: ati.id },
     ]);
 
+    // Kategori hutang/piutang diisi migrasi 0006
+    const kategoriId = new Map((await tx.select().from(kategoriHutangPiutang)).map((k) => [k.kode, k.id]));
     const idByKode = new Map();
-    for (const [kode, nama, kategori, tipeSaldo, klasifikasi, induk, opsi = {}] of COA) {
+    for (const [kode, nama, kategori, tipeSaldo, klasifikasi, induk, { kategoriHutangPiutang: kategoriHp, ...opsi } = {}] of COA) {
       const [row] = await tx.insert(akun).values({
-        kode, nama, kategori, tipeSaldo, klasifikasi, indukId: induk ? idByKode.get(induk) : null, ...opsi,
+        kode, nama, kategori, tipeSaldo, klasifikasi, indukId: induk ? idByKode.get(induk) : null,
+        kategoriHpId: kategoriHp ? kategoriId.get(kategoriHp) : null, ...opsi,
       }).returning({ id: akun.id });
       idByKode.set(kode, row.id);
     }

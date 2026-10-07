@@ -68,7 +68,7 @@ async function listMutasi({ kodePembantuId, kategori, proyekId, jurnalIds: onlyI
     .innerJoin(jurnal, eq(jurnal.id, jurnalDetail.jurnalId))
     .innerJoin(kodePembantu, eq(kodePembantu.id, jurnalDetail.kodePembantuId))
     .innerJoin(akun, eq(akun.id, jurnalDetail.akunId))
-    .where(and(...filters, isNotNull(akun.kategoriHutangPiutang)))
+    .where(and(...filters, isNotNull(akun.kategoriHpId)))
     .orderBy(desc(jurnal.tanggal), desc(jurnal.createdAt));
 
   const jurnalIds = [...new Set(rows.map((r) => r.jurnalId))];
@@ -132,7 +132,7 @@ const barisLawan = (akunId, jenis, nilai) => (jenis === 'kredit'
 async function catatMutasi(tx, actor, b) {
   await h.findProyekAktif(tx, b.proyekId);
   const lawan = await h.findAkunAktif(tx, b.akunCoaId, 'Akun lawan');
-  if (lawan.kategoriHutangPiutang) throw new AppError('Akun lawan tidak boleh akun hutang/piutang. Pilih akun kas, persediaan, atau beban.', 422);
+  if (lawan.kategoriHpId) throw new AppError('Akun lawan tidak boleh akun hutang/piutang. Pilih akun kas, persediaan, atau beban.', 422);
 
   if (b.kategori !== 'antar_proyek') {
     const kp = await h.resolveKodePembantu(tx, {
