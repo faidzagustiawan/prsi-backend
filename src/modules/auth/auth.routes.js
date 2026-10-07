@@ -13,15 +13,31 @@ const userSchema = {
   },
 };
 
-const userResponse = {
+const tokenResponse = {
   200: {
     type: 'object',
     properties: {
       success: { type: 'boolean' },
       message: { type: 'string' },
-      data: { type: 'object', properties: { user: userSchema } },
+      data: {
+        type: 'object',
+        properties: {
+          user: userSchema,
+          accessToken: { type: 'string', description: 'JWT untuk header Authorization: Bearer; berlaku 15 menit.' },
+          refreshToken: { type: 'string', description: 'Token sekali pakai untuk POST /auth/refresh; berlaku 7 hari, dirotasi setiap refresh.' },
+          tokenType: { type: 'string', enum: ['Bearer'] },
+          expiresIn: { type: 'integer', description: 'Umur accessToken dalam detik.' },
+        },
+      },
     },
   },
+};
+
+// Opsional: klien Bearer mengirim refresh token di body; klien sesitus memakai cookie
+const refreshBody = {
+  // null: POST tanpa body (klien cookie) tetap diterima
+  type: ['object', 'null'],
+  properties: { refreshToken: { type: 'string', minLength: 1 } },
 };
 
 export default async function authRoutes(fastify) {
@@ -43,7 +59,7 @@ export default async function authRoutes(fastify) {
             password: { type: 'string', minLength: 1 },
           },
         },
-        response: userResponse,
+        response: tokenResponse,
       },
     },
     controller.loginHandler
@@ -54,10 +70,11 @@ export default async function authRoutes(fastify) {
     {
       config: { rateLimit: { max: 60, timeWindow: '1 minute' } },
       schema: {
-        description: 'Memperbarui sesi dari cookie refresh token',
+        description: 'Memperbarui sesi dari refreshToken di body atau cookie refresh token',
         tags: ['Auth'],
         security: [],
-        response: userResponse,
+        body: refreshBody,
+        response: tokenResponse,
       },
     },
     controller.refreshHandler
@@ -65,7 +82,7 @@ export default async function authRoutes(fastify) {
 
   fastify.post(
     '/logout',
-    { schema: { description: 'Logout', tags: ['Auth'], security: [] } },
+    { schema: { description: 'Logout', tags: ['Auth'], security: [], body: refreshBody } },
     controller.logoutHandler
   );
 

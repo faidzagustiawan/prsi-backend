@@ -31,6 +31,7 @@ async function swaggerPlugin(fastify) {
       ],
       components: {
         securitySchemes: {
+          bearerAuth: { type: 'http', scheme: 'bearer', bearerFormat: 'JWT', description: 'accessToken dari body POST /api/v1/auth/login atau /refresh; berlaku 15 menit.' },
           accessCookie: { type: 'apiKey', in: 'cookie', name: 'si_access_token', description: 'Cookie HttpOnly dari POST /api/v1/auth/login; berlaku 15 menit.' },
           refreshCookie: { type: 'apiKey', in: 'cookie', name: 'si_refresh_token', description: 'Cookie HttpOnly, path /api/v1/auth; berlaku 7 hari dan dirotasi setiap refresh.' },
         },

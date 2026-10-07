@@ -41,6 +41,7 @@ export const env = {
   frontendUrls: process.env.FRONTEND_URL
     ? process.env.FRONTEND_URL.split(',')
     : ['http://localhost:5174'],
+  corsAllowAll: process.env.CORS_ALLOW_ALL === 'true',
   apiUrl: process.env.API_URL || 'http://localhost:3100',
   // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),

@@ -46,8 +46,8 @@ export function transformRoute({ schema = {}, url, route }) {
   const relative = url.replace(/^\/api\/v1/, '').replace(/\/$/, '');
   const roles = hooks.flatMap((hook) => hook.allowedRoles ?? []);
   const secured = hooks.some((hook) => hook.requiresAuthentication || hook.allowedRoles);
-  result.security = secured ? [{ accessCookie: [] }] : [];
-  if (relative === '/auth/refresh') result.security = [{ refreshCookie: [] }];
+  result.security = secured ? [{ bearerAuth: [] }, { accessCookie: [] }] : [];
+  if (relative === '/auth/refresh') result.security = [{}, { refreshCookie: [] }];
   result.summary ||= (result.description || (url === '/health' ? 'Kesehatan API, database, dan Redis' : relative)).split(/[.\n]/)[0];
   result.tags ||= ['Operasional'];
   result.operationId = `${String(route.method).toLowerCase()}_${relative.replace(/[^a-zA-Z0-9]+/g, '_').replace(/^_|_$/g, '')}`;
@@ -122,11 +122,11 @@ function finishOperation(operation, path, method) {
   }
   if (path.endsWith('/auth/login') || path.endsWith('/auth/refresh')) {
     operation.responses[200].headers = {
-      'Set-Cookie': { schema: { type: 'string' }, description: 'Dua header Set-Cookie: si_access_token dan si_refresh_token. HttpOnly; Secure di produksi; SameSite=Strict. Browser mengelola cookie otomatis.' },
+      'Set-Cookie': { schema: { type: 'string' }, description: 'Dua header Set-Cookie: si_access_token dan si_refresh_token. HttpOnly; Secure di produksi; SameSite=Strict. Browser mengelola cookie otomatis untuk klien sesitus; klien lintas situs memakai token di body.' },
     };
   }
   if (path === '/api/v1/auth/logout') {
-    operation.description += '\n\nMencabut refresh session jika tersedia dan menghapus kedua cookie. Dapat dipanggil tanpa sesi.';
+    operation.description += '\n\nMencabut refresh session (refreshToken di body atau cookie) jika tersedia dan menghapus kedua cookie. Dapat dipanggil tanpa sesi.';
   }
   if (path === '/api/v1/lampiran' && method === 'post') {
     operation.requestBody = { required: true, content: { 'multipart/form-data': {

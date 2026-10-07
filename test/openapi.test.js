@@ -51,8 +51,8 @@ describe('OpenAPI contract', () => {
 
   it('documents cookie auth and exact authorization roles', () => {
     expect(document.paths['/api/v1/auth/login'].post.security).toEqual([]);
-    expect(document.paths['/api/v1/auth/refresh'].post.security).toEqual([{ refreshCookie: [] }]);
-    expect(document.paths['/api/v1/auth/me'].get.security).toEqual([{ accessCookie: [] }]);
+    expect(document.paths['/api/v1/auth/refresh'].post.security).toEqual([{}, { refreshCookie: [] }]);
+    expect(document.paths['/api/v1/auth/me'].get.security).toEqual([{ bearerAuth: [] }, { accessCookie: [] }]);
     expect(document.paths['/api/v1/jurnal'].get['x-roles']).toEqual(['keuangan']);
     expect(document.paths['/api/v1/sinkron/status'].get['x-roles']).toEqual(['keuangan', 'admin']);
     expect(document.components.securitySchemes.accessCookie.name).toBe('si_access_token');
