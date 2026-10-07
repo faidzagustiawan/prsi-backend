@@ -10,7 +10,6 @@ import { reportDb } from '../../config/database.js';
 import { validate } from '../../middleware/validate.js';
 import { keuanganOnly } from '../../middleware/authorize.js';
 import { uuidSchema, isoDate, bulanSchema } from '../../shared/utils/zod.js';
-import { KATEGORI_KODE_PEMBANTU } from '../../shared/constants.js';
 import { STATUS_TERBUKU } from '../jurnal/jurnal.repository.js';
 import { saldoKodePembantu } from './laporan.service.js';
 
@@ -115,7 +114,7 @@ export default async function laporanRoutes(fastify) {
 
   fastify.get('/saldo-kode-pembantu', {
     preHandler: [...guard, validate({
-      query: z.object({ bulan: bulanSchema, proyekId: uuidSchema.optional(), kategori: z.enum(KATEGORI_KODE_PEMBANTU).optional() }),
+      query: z.object({ bulan: bulanSchema, proyekId: uuidSchema.optional(), kategori: z.string().trim().max(20).optional() }),
     })],
     schema: {
       tags,

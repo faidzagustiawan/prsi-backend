@@ -12,11 +12,13 @@ import { keuanganOnly, actorOf } from '../../middleware/authorize.js';
 import { idParams, uuidSchema, optionalText } from '../../shared/utils/zod.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { recordFieldChanges, recordAuditTx, AuditAction } from '../../shared/utils/audit.js';
-import { KATEGORI_AKUN, KLASIFIKASI_AKUN, TIPE_SALDO, KATEGORI_HUTANG_PIUTANG } from '../../shared/constants.js';
+import { KATEGORI_AKUN, KLASIFIKASI_AKUN, TIPE_SALDO } from '../../shared/constants.js';
+import { kategoriById, findKategoriByKode } from '../kategori-hp/kategori-hp.routes.js';
 
 const tags = ['Akun (COA)'];
 
-export const toAkunDto = (r) => ({
+// kategoriMap: id -> kategori_hutang_piutang (lihat kategoriById)
+export const toAkunDto = (r, kategoriMap) => ({
   id: r.id,
   kodeAkun: r.kode,
   namaAkun: r.nama,
@@ -29,7 +31,9 @@ export const toAkunDto = (r) => ({
   wajibProyek: r.wajibProyek,
   isKasBank: r.isKasBank,
   noRekening: r.noRekening ?? undefined,
-  kategoriHutangPiutang: r.kategoriHutangPiutang ?? undefined,
+  kategoriHpId: r.kategoriHpId ?? undefined,
+  kategoriHutangPiutang: kategoriMap.get(r.kategoriHpId)?.kode,
+  kategoriHutangPiutangNama: kategoriMap.get(r.kategoriHpId)?.nama,
 });
 
 const fields = {
@@ -44,7 +48,9 @@ const fields = {
   wajibProyek: z.boolean().default(false),
   isKasBank: z.boolean().default(false),
   noRekening: optionalText(30),
-  kategoriHutangPiutang: z.enum(KATEGORI_HUTANG_PIUTANG).optional().nullable().or(z.literal('')),
+  // Salah satu: kategoriHpId (id) atau kategoriHutangPiutang (kode kategori). Kosong = bukan akun hutang/piutang.
+  kategoriHpId: uuidSchema.optional().nullable().or(z.literal('')),
+  kategoriHutangPiutang: z.string().trim().max(20).optional().nullable(),
 };
 
 const toColumns = (b) => {
@@ -56,15 +62,28 @@ const toColumns = (b) => {
   for (const [from, to] of Object.entries(map)) if (from in b) out[to] = b[from];
   if ('status' in b) out.aktif = b.status === 'aktif';
   if ('akunIndukId' in b) out.indukId = b.akunIndukId || null;
-  if ('kategoriHutangPiutang' in b) out.kategoriHutangPiutang = b.kategoriHutangPiutang || null;
+  if ('kategoriHpId' in b) out.kategoriHpId = b.kategoriHpId || null;
   return out;
 };
+
+/** Ubah kategoriHutangPiutang (kode) menjadi kategoriHpId; kategori harus ada dan aktif. */
+async function resolveKategori(tx, values, body) {
+  if (body.kategoriHutangPiutang !== undefined && !('kategoriHpId' in body)) {
+    values.kategoriHpId = body.kategoriHutangPiutang ? (await findKategoriByKode(tx, body.kategoriHutangPiutang)).id : null;
+  }
+  if (values.kategoriHpId) {
+    const kategori = (await kategoriById(tx)).get(values.kategoriHpId);
+    if (!kategori) throw new AppError('Kategori hutang/piutang tidak ditemukan.', 400);
+    if (!kategori.aktif) throw new AppError(`Kategori hutang/piutang "${kategori.kode}" nonaktif.`, 400);
+  }
+  return values;
+}
 
 const yaTidak = (v) => (v ? 'Ya' : 'Tidak');
 const LABELS = {
   kode: 'Kode akun', nama: 'Nama akun', kategori: 'Kategori', tipeSaldo: 'Tipe saldo', klasifikasi: 'Klasifikasi',
   aktif: 'Status', indukId: 'Akun induk', wajibKodePembantu: 'Wajib kode pembantu', wajibProyek: 'Wajib proyek',
-  isKasBank: 'Akun kas/bank', noRekening: 'No. rekening', kategoriHutangPiutang: 'Kategori hutang/piutang',
+  isKasBank: 'Akun kas/bank', noRekening: 'No. rekening', kategoriHpId: 'Kategori hutang/piutang',
 };
 const FORMAT = {
   aktif: (v) => (v ? 'Aktif' : 'Nonaktif'),
@@ -108,12 +127,15 @@ export default async function akunRoutes(fastify) {
     if (status) filters.push(eq(akun.aktif, status === 'aktif'));
     if (kategori) filters.push(eq(akun.kategori, kategori));
     const rows = await db.select().from(akun).where(filters.length ? and(...filters) : undefined).orderBy(asc(akun.kode));
-    return { success: true, message: 'Success', data: rows.map(toAkunDto) };
+    const kategoriMap = await kategoriById(db);
+    return { success: true, message: 'Success', data: rows.map((r) => toAkunDto(r, kategoriMap)) };
   });
 
   fastify.get('/:id', {
     preHandler: [...guard, validate({ params: idParams })], schema: { tags, description: 'Detail akun' },
-  }, async (request) => ({ success: true, message: 'Success', data: toAkunDto(await findAkun(db, request.params.id)) }));
+  }, async (request) => ({
+    success: true, message: 'Success', data: toAkunDto(await findAkun(db, request.params.id), await kategoriById(db)),
+  }));
 
   fastify.get('/:id/riwayat', {
     preHandler: [...guard, validate({ params: idParams })],
@@ -148,13 +170,13 @@ export default async function akunRoutes(fastify) {
   }, async (request, reply) => {
     const actor = actorOf(request);
     const row = await db.transaction(async (tx) => {
-      const values = toColumns(request.body);
+      const values = await resolveKategori(tx, toColumns(request.body), request.body);
       await assertInduk(tx, values.indukId);
       const [created] = await tx.insert(akun).values(values).returning();
       await recordAuditTx(tx, { ...actor, action: AuditAction.CREATE, entity: 'akun', entityId: created.id, summary: `${created.kode} ${created.nama}` });
       return created;
     });
-    return reply.code(201).send({ success: true, message: 'Akun ditambahkan', data: toAkunDto(row) });
+    return reply.code(201).send({ success: true, message: 'Akun ditambahkan', data: toAkunDto(row, await kategoriById(db)) });
   });
 
   fastify.patch('/:id', {
@@ -164,7 +186,7 @@ export default async function akunRoutes(fastify) {
     const actor = actorOf(request);
     const row = await db.transaction(async (tx) => {
       const before = await findAkun(tx, request.params.id);
-      const values = toColumns(request.body);
+      const values = await resolveKategori(tx, toColumns(request.body), request.body);
       if ('indukId' in values && values.indukId !== before.indukId) await assertInduk(tx, values.indukId, before.id);
 
       const struktural = ['kode', 'kategori', 'tipeSaldo', 'klasifikasi'].filter((k) => k in values && values[k] !== before[k]);
@@ -174,10 +196,14 @@ export default async function akunRoutes(fastify) {
       }
 
       const [updated] = await tx.update(akun).set({ ...values, updatedAt: new Date() }).where(eq(akun.id, before.id)).returning();
-      await recordFieldChanges(tx, { ...actor, entity: 'akun', entityId: before.id, before, after: values, labels: LABELS, format: FORMAT });
+      const kategoriMap = await kategoriById(tx);
+      await recordFieldChanges(tx, {
+        ...actor, entity: 'akun', entityId: before.id, before, after: values, labels: LABELS,
+        format: { ...FORMAT, kategoriHpId: (v) => kategoriMap.get(v)?.nama ?? '-' },
+      });
       return updated;
     });
-    return { success: true, message: 'Akun diperbarui', data: toAkunDto(row) };
+    return { success: true, message: 'Akun diperbarui', data: toAkunDto(row, await kategoriById(db)) };
   });
 
   fastify.delete('/:id', {

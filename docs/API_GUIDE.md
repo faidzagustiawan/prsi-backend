@@ -121,6 +121,13 @@ lampiran jika ada kas/bank, kemudian posting. Periode terkunci tidak menerima
 perubahan; koreksi memakai jurnal balik di periode berjalan. Request memakai
 `keterangan`, yang dipetakan menjadi `uraian` oleh backend.
 
+**Kategori hutang/piutang:** daftar ada di `GET /kategori-hutang-piutang`
+dan bisa ditambah tanpa ubah kode. Akun merujuk kategori lewat `kategoriHpId`;
+respons akun juga memuat `kategoriHutangPiutang` (kode) dan
+`kategoriHutangPiutangNama`. Input akun menerima salah satu dari keduanya.
+Kategori kode pembantu harus kode kategori yang aktif. Kategori `pembeli`
+bernama Penjualan (piutang penjualan dan kode pembantu pembeli).
+
 **Lampiran:** `POST /lampiran?entityType=jurnal&entityId=<uuid>` atau
 `entityType=dokumen`. Multipart field `file`, satu PDF/JPEG/PNG/WEBP, maksimal
 10 MiB. Unduhan dapat berupa berkas atau redirect ke sumber Track.

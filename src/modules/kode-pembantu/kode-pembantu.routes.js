@@ -7,6 +7,7 @@ import { and, asc, eq, ilike, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
 import { kodePembantu, jurnalDetail, saldoAwal } from '../../shared/schemas/akuntansi.schema.js';
+import { findKategoriByKode } from '../kategori-hp/kategori-hp.routes.js';
 import { trkProjects } from '../../shared/schemas/track.schema.js';
 import { validate, validatePatch } from '../../middleware/validate.js';
 import { keuanganOnly, actorOf } from '../../middleware/authorize.js';
@@ -14,14 +15,8 @@ import { idParams, uuidSchema } from '../../shared/utils/zod.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { recordFieldChanges, recordAuditTx, AuditAction } from '../../shared/utils/audit.js';
 import { nextNumber, pad } from '../../shared/utils/penomoran.js';
-import { KATEGORI_KODE_PEMBANTU } from '../../shared/constants.js';
 
 const tags = ['Kode Pembantu'];
-
-const PREFIX = {
-  lahan: 'LH', bank: 'BK', antar_proyek: 'AP', ppn: 'PJ', pihak_ketiga: 'PK', pemegang_saham: 'PS',
-  karyawan: 'KR', kontraktor: 'KT', lain_lain: 'LL', pembeli: 'PB',
-};
 
 export const toKodePembantuDto = (r) => ({
   id: r.id,
@@ -39,9 +34,12 @@ async function assertProyek(tx, proyekId) {
   if (!p) throw new AppError('Proyek tidak ditemukan.', 400);
 }
 
-/** Kode otomatis per kategori, mis. LH-0008. Dipakai juga oleh worker untuk pembeli baru. */
+/**
+ * Kode otomatis per kategori, mis. LH-0008, dengan prefix dari tabel kategori.
+ * Kategori harus ada dan aktif. Dipakai juga oleh worker untuk pembeli baru.
+ */
 export async function generateKode(tx, kategori) {
-  const prefix = PREFIX[kategori] ?? 'LL';
+  const { prefixKodePembantu: prefix } = await findKategoriByKode(tx, kategori);
   const n = await nextNumber(tx, { jenis: 'kode_pembantu', scope: prefix, tahun: 0 });
   return `${prefix}-${pad(n)}`;
 }
@@ -61,7 +59,7 @@ export default async function kodePembantuRoutes(fastify) {
     preHandler: [...guard, validate({
       query: z.object({
         proyekId: uuidSchema.optional(),
-        kategori: z.enum(KATEGORI_KODE_PEMBANTU).optional(),
+        kategori: z.string().trim().max(20).optional(),
         aktif: z.enum(['true', 'false']).optional(),
         q: z.string().trim().max(100).optional(),
       }),
@@ -82,7 +80,7 @@ export default async function kodePembantuRoutes(fastify) {
     preHandler: [...guard, validate({
       body: z.object({
         nama: z.string().trim().min(1, 'Nama wajib diisi').max(150),
-        kategori: z.enum(KATEGORI_KODE_PEMBANTU),
+        kategori: z.string().trim().min(1, 'Kategori wajib diisi').max(20),
         proyekId: uuidSchema.optional().nullable(),
       }),
     })],

@@ -43,6 +43,20 @@
       "when": 1791193020587,
       "tag": "0005_sync_v2_cursor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791355557281,
+      "tag": "0006_kategori_hp_fk",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1791355588182,
+      "tag": "0007_drop_kategori_hp_teks",
+      "breakpoints": true
     }
   ]
 }

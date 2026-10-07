@@ -32,7 +32,7 @@ export async function saldoKodePembantu({ bulan, proyekId, kategori, akunKategor
   const sisiLain = akunKategori
     ? sql`AND NOT EXISTS (
         SELECT 1 FROM finance.jurnal_detail x JOIN finance.akun xa ON xa.id = x.akun_id
-        WHERE x.kode_pembantu_id = kp.id AND xa.kategori_hutang_piutang IS NOT NULL AND xa.kategori <> ${akunKategori})`
+        WHERE x.kode_pembantu_id = kp.id AND xa.kategori_hp_id IS NOT NULL AND xa.kategori <> ${akunKategori})`
     : sql``;
 
   const rows = await reportDb.execute(sql`

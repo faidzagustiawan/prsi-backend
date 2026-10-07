@@ -2,10 +2,12 @@
 -- Idempoten: akun yang kodenya sudah ada dilewati (ON CONFLICT DO NOTHING).
 -- Induk diturunkan dari prefix kode; baris tanpa D/K di sheet = akun header,
 -- tipe saldonya mengikuti saldo normal kategori.
--- Kode 11100 (KAS) 5 digit sesuai sheet. Afiliasi PT = pihak_ketiga.
+-- Butuh migrasi 0006 (tabel kategori_hutang_piutang). Koreksi dari sheet:
+-- KAS 11100 -> 111000; 523100 di bawah 400000 (saldo normal K, bukan grup
+-- beban 523000); 113530 kategori pembeli (Penjualan). Afiliasi PT = pihak_ketiga.
 -- Modul hutang memakai akun berkode terkecil per kategori hutang/piutang
--- (bank: 215070; pihak_ketiga: 215010). Mutasi akun lain di kategori yang sama
--- dicatat lewat jurnal manual.
+-- (bank: 215070; pihak_ketiga: 113500/215010). Mutasi akun lain di kategori
+-- yang sama dicatat lewat jurnal manual.
 -- Tidak tercatat di audit_logs; akun_sistem dan no_rekening diisi terpisah.
 BEGIN;
 
@@ -19,8 +21,8 @@ INSERT INTO coa_seed (kode, nama, induk, kategori, tipe_saldo, klasifikasi, kate
   wajib_kode_pembantu, wajib_proyek, is_kas_bank) VALUES
   ('100000', 'AKTIVA', NULL, 'aktiva', 'd', 'neraca', NULL, false, false, false),
   ('110000', 'AKTIVA LANCAR', '100000', 'aktiva', 'd', 'neraca', NULL, false, false, false),
-  ('11100', 'KAS', '110000', 'aktiva', 'd', 'neraca', NULL, false, false, false),
-  ('111100', 'REKENING TABUNGAN PENAMPUNG', '11100', 'aktiva', 'd', 'neraca', NULL, false, false, true),
+  ('111000', 'KAS', '110000', 'aktiva', 'd', 'neraca', NULL, false, false, false),
+  ('111100', 'REKENING TABUNGAN PENAMPUNG', '111000', 'aktiva', 'd', 'neraca', NULL, false, false, true),
   ('112000', 'BANK', '110000', 'aktiva', 'd', 'neraca', NULL, false, false, false),
   ('112010', 'BANK BCA BRI BSI BNI (GIRO)', '112000', 'aktiva', 'd', 'neraca', NULL, false, false, true),
   ('112020', 'BANK BTN BTNS (GIRO)', '112000', 'aktiva', 'd', 'neraca', NULL, false, false, true),
@@ -29,7 +31,7 @@ INSERT INTO coa_seed (kode, nama, induk, kategori, tipe_saldo, klasifikasi, kate
   ('113500', 'PIUTANG AFILIASI PT. PODO RUKUN INDONESIA', '113000', 'aktiva', 'd', 'neraca', 'pihak_ketiga', true, false, false),
   ('113510', 'PIUTANG AFILIASI PT. PODO RUKUN NUSANTARA', '113000', 'aktiva', 'd', 'neraca', 'pihak_ketiga', true, false, false),
   ('113520', 'PIUTANG AFILIASI PT. PODO RUKUN GROUP', '113000', 'aktiva', 'd', 'neraca', 'pihak_ketiga', true, false, false),
-  ('113530', 'PIUTANG PENJUALAN', '113000', 'aktiva', 'd', 'neraca', NULL, true, true, false),
+  ('113530', 'PIUTANG PENJUALAN', '113000', 'aktiva', 'd', 'neraca', 'pembeli', true, true, false),
   ('113540', 'PIUTANG PEMEGANG SAHAM (DEVIDEN)', '113000', 'aktiva', 'd', 'neraca', 'pemegang_saham', true, false, false),
   ('113600', 'PIUTANG KARYAWAN', '113000', 'aktiva', 'd', 'neraca', 'karyawan', true, false, false),
   ('113700', 'PIUTANG LAIN-LAIN', '113000', 'aktiva', 'd', 'neraca', 'lain_lain', true, false, false),
@@ -91,17 +93,18 @@ INSERT INTO coa_seed (kode, nama, induk, kategori, tipe_saldo, klasifikasi, kate
   ('522270', 'BIAYA KANTOR', '522200', 'beban', 'd', 'laba_rugi', NULL, false, false, false),
   ('522280', 'BIAYA LAIN-LAIN', '522200', 'beban', 'd', 'laba_rugi', NULL, false, false, false),
   ('523000', 'PEMASUKAN (PENGELUARAN) LAIN-LAIN', '500000', 'beban', 'd', 'laba_rugi', NULL, false, false, false),
-  ('523100', 'PENDAPATAN LAIN LAIN', '523000', 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
+  ('523100', 'PENDAPATAN LAIN LAIN', '400000', 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
   ('523200', 'BUNGA ADMIN BANK', '523000', 'beban', 'd', 'laba_rugi', NULL, false, false, false),
   ('524000', 'BIAYA PAJAK', '500000', 'beban', 'd', 'laba_rugi', NULL, false, false, false),
   ('524100', 'PAJAK KANTOR', '524000', 'beban', 'd', 'laba_rugi', NULL, false, false, false);
 
 -- Tahap 1: semua akun tanpa induk; tahap 2: hubungkan induk berdasarkan kode
-INSERT INTO finance.akun (kode, nama, kategori, tipe_saldo, klasifikasi, kategori_hutang_piutang,
+INSERT INTO finance.akun (kode, nama, kategori, tipe_saldo, klasifikasi, kategori_hp_id,
   wajib_kode_pembantu, wajib_proyek, is_kas_bank)
-SELECT kode, nama, kategori, tipe_saldo, klasifikasi, kategori_hutang_piutang,
-  wajib_kode_pembantu, wajib_proyek, is_kas_bank
-FROM coa_seed ORDER BY urut
+SELECT s.kode, s.nama, s.kategori, s.tipe_saldo, s.klasifikasi, k.id,
+  s.wajib_kode_pembantu, s.wajib_proyek, s.is_kas_bank
+FROM coa_seed s LEFT JOIN finance.kategori_hutang_piutang k ON k.kode = s.kategori_hutang_piutang
+ORDER BY s.urut
 ON CONFLICT (kode) DO NOTHING;
 
 UPDATE finance.akun a SET induk_id = p.id, updated_at = now()
