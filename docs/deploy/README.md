@@ -85,6 +85,36 @@ cd /opt/podorukun-si && sudo mv app app.failed && sudo mv app.prev-20261005T1029
 
 `podorukun-si-worker.service` masih berstatus enabled tetapi inactive. Unit itu langsung keluar karena `SYNC_ENABLED=false`.
 
+## Deploy 7 Oktober 2026 (`3eecdef`, PR #6)
+
+CORS terbuka untuk masa uji frontend dan token Bearer di body login/refresh.
+Commit `3eecdef` berbasis `main` `5c40db5`; PR #6 belum di-merge saat deploy.
+
+Cara deploy sama dengan 5 Oktober: rilis di `app.new`, `npm ci --omit=dev`
+(104 paket), uji port 3199, tukar direktori, restart `podorukun-si-api`.
+
+Konfigurasi: `.env` hanya ditambah `CORS_ALLOW_ALL=true`. Kembalikan ke `false`
+dan isi `FRONTEND_URL` setelah domain frontend dikonfirmasi.
+
+Nginx menyajikan `/openapi.json` dan `/docs/scalar.html` dari berkas statis di
+`/var/www/podorukun-si-docs/`, bukan dari app. Berkas ini dibangun ulang dengan
+`npm run docs:build` dan diganti pada deploy ini (sebelumnya versi 4 Oktober).
+
+Hasil verifikasi publik: health 200 (DB/Redis ok); preflight dari
+`http://localhost:5173` 204 dengan `access-control-allow-origin` sesuai;
+refresh tanpa body dan dengan body ditangani; Bearer tidak valid 401;
+`/login` 404; OpenAPI publik memuat `bearerAuth` dan token di respons login.
+
+Backup: `/var/backups/podorukun-si/pre-cors-bearer-20261007T060338Z/` (app tanpa
+`node_modules` termasuk `.env`, unit systemd, dokumen statis lama; 700/600 root).
+Rilis lama: `/opt/podorukun-si/app.prev-20261007T060531Z`.
+
+Rollback aplikasi:
+
+```
+sudo mv /opt/podorukun-si/app /opt/podorukun-si/app.failed && sudo mv /opt/podorukun-si/app.prev-20261007T060531Z /opt/podorukun-si/app && sudo systemctl restart podorukun-si-api
+```
+
 ## Dokumentasi API
 
 Backend menyediakan GET /openapi.json. Endpoint ini hanya mengembalikan kontrak
