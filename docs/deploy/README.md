@@ -115,6 +115,37 @@ Rollback aplikasi:
 sudo mv /opt/podorukun-si/app /opt/podorukun-si/app.failed && sudo mv /opt/podorukun-si/app.prev-20261007T060531Z /opt/podorukun-si/app && sudo systemctl restart podorukun-si-api
 ```
 
+## Deploy 7 Oktober 2026 (main `82af131`, PR #8)
+
+Kategori hutang/piutang menjadi tabel dan FK (migrasi 0006 + 0007), lalu
+koreksi COA (`database/seed/coa-koreksi-20261007.sql`).
+
+Cara migrasi: `drizzle-kit` tidak ada di VPS, jadi dipakai migrator
+`drizzle-orm/postgres-js/migrator` dari rilis baru dengan `SESSION_DATABASE_URL`
+(session pooler 6433), `statement_timeout` 5 menit dan `lock_timeout` 60 detik
+untuk sesi itu. Urutan: dump schema finance, stop API, migrasi (satu transaksi),
+tukar `app.new`, start API, jalankan SQL koreksi.
+
+Kendala: dua percobaan pertama gagal (`statement_timeout` server 30 detik, lalu
+`lock_timeout`) karena sesi DBeaver `idle in transaction` memegang
+AccessShareLock pada `finance.akun`. Sesi diputus, migrasi lalu berhasil. Kedua
+kegagalan dibatalkan utuh. Pakai DBeaver di produksi dengan Auto-Commit dan
+putuskan koneksi sebelum migrasi.
+
+Hasil: `__drizzle_migrations` 8 baris; 17 akun berkategori; KAS 111000,
+523100 di bawah 400000, 113530 kategori pembeli; tiga baris audit
+"Koreksi COA 07/10/2026". Health 200; `/api/v1/kategori-hutang-piutang` 401
+tanpa login; OpenAPI statis di `/var/www/podorukun-si-docs/` dibangun ulang.
+
+Backup: `/var/backups/podorukun-si/pre-kategori-hp-20261007T065417Z/` (app,
+dump schema finance `finance-schema-071001.dump`, dokumen statis lama).
+Rilis lama: `/opt/podorukun-si/app.prev-20261007T071002Z`, tetapi **tidak
+kompatibel** dengan skema baru. Rollback = pulihkan dump schema finance lalu
+rilis lama, bukan hanya menukar direktori.
+
+Dua deploy lain terjadi di luar catatan ini (14:45 dan 14:49 WIB,
+`app.prev-20261007T064544Z` dan `...064905Z`).
+
 ## Dokumentasi API
 
 Backend menyediakan GET /openapi.json. Endpoint ini hanya mengembalikan kontrak
