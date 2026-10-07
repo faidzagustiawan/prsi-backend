@@ -22,13 +22,16 @@ export function normalized(field, type = 'text') {
   return `COALESCE(${conversions[type]}, E'\\\\N')`;
 }
 
+// Baris uji yang ditanam langsung di PRSI (raw.dummy, database/seed/dummy-*) tidak
+// berasal dari Track, jadi dikeluarkan dari pembanding. Payload Track tidak
+// pernah membawa kunci "dummy".
 export function checksumSql(entity) {
   if (!Object.hasOwn(FIELDS, entity)) throw new Error('Unknown entity');
   const values = FIELDS[entity].map(([field, type]) => normalized(field, type));
   return `SELECT count(*)::int AS count,
     coalesce(md5(string_agg(track_id::text || ':' || row_version::text, ',' ORDER BY track_id::text COLLATE "C")), md5('')) AS hash,
     coalesce(md5(string_agg(track_id::text || ':' || md5(track_id::text || '|' || ${values.join(" || '|' || ")}), ',' ORDER BY track_id::text COLLATE "C")), md5('')) AS content_hash
-    FROM finance.trk_${entity} WHERE is_deleted = false`;
+    FROM finance.trk_${entity} WHERE is_deleted = false AND raw->>'dummy' IS NULL`;
 }
 
 export async function checksum(client, entity) {
