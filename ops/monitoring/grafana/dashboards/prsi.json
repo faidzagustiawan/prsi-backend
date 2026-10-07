@@ -1,12 +1,13 @@
 {
   "uid": "prsi-monitoring",
-  "title": "PRSI — Kesehatan & Integritas",
+  "title": "PRSI — Ringkasan Monitoring",
+  "description": "Ringkasan satu layar untuk Track staging ↔ PRSI. Buka Rincian untuk pemeriksaan mendalam.",
   "schemaVersion": 41,
-  "version": 1,
+  "version": 2,
   "timezone": "Asia/Jakarta",
   "refresh": "30s",
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "tags": [
@@ -14,26 +15,15 @@
   ],
   "panels": [
     {
-      "id": 1,
-      "type": "row",
-      "title": "Ringkasan",
+      "id": 27,
+      "title": "LAYANAN",
+      "description": "Semua target terpantau, kedua health probe berhasil, dan service PRSI aktif.",
+      "type": "stat",
       "gridPos": {
         "x": 0,
         "y": 0,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 2,
-      "title": "Semua target dapat di-scrape",
-      "type": "stat",
-      "gridPos": {
-        "x": 0,
-        "y": 1,
-        "w": 24,
-        "h": 7
+        "w": 6,
+        "h": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -42,13 +32,49 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "min(up)",
-          "legendFormat": "{{instance}}"
+          "expr": "min(up) * min(probe_success) * min(node_systemd_unit_state{name=\"podorukun-si-api.service\",state=\"active\"})",
+          "legendFormat": "Layanan",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "UNKNOWN",
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "PERIKSA"
+                },
+                "1": {
+                  "text": "SEHAT"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
@@ -56,12 +82,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "red"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 1,
+                "color": "green"
               }
             ]
           }
@@ -70,6 +96,15 @@
       },
       "options": {
         "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -80,14 +115,15 @@
       }
     },
     {
-      "id": 3,
-      "title": "Integritas tersedia dan tanpa pelanggaran",
+      "id": 28,
+      "title": "INTEGRITAS",
+      "description": "Seluruh aturan yang dipantau harus nol; pemeriksaan harus berhasil dan berumur paling lama 11 menit.",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 8,
-        "w": 24,
-        "h": 7
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -96,13 +132,49 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(min(monitor_collection_success) == bool 1) * (max(accounting_invariant_violations) == bool 0)",
-          "legendFormat": "{{instance}}"
+          "expr": "(min(monitor_collection_success) == bool 1) * (max(accounting_invariant_violations) == bool 0) * (max(monitor_collection_age_seconds) <= bool 660)",
+          "legendFormat": "Integritas",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "UNKNOWN",
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "PERIKSA"
+                },
+                "1": {
+                  "text": "TANPA PELANGGARAN"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
@@ -110,12 +182,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "red"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 1,
+                "color": "green"
               }
             ]
           }
@@ -124,6 +196,15 @@
       },
       "options": {
         "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -134,14 +215,15 @@
       }
     },
     {
-      "id": 4,
-      "title": "Tujuh entitas cocok — pending/unknown bukan sehat",
+      "id": 29,
+      "title": "DATA COCOK",
+      "description": "Jumlah entitas yang isi dan jumlah barisnya cocok. Pembanding adalah Track STAGING, bukan production.",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 15,
-        "w": 24,
-        "h": 7
+        "x": 12,
+        "y": 0,
+        "w": 6,
+        "h": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -150,13 +232,46 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "sum(sync_entity_match == bool 1) == bool 7",
-          "legendFormat": "{{instance}}"
+          "expr": "sum((sync_entity_match == bool 1) * on(entity) (sync_checker_success == bool 1))",
+          "legendFormat": "Entitas",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "UNKNOWN",
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "7": {
+                  "text": "7 / 7 COCOK"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
@@ -164,12 +279,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "orange"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 7,
+                "color": "green"
               }
             ]
           }
@@ -178,6 +293,15 @@
       },
       "options": {
         "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -188,828 +312,15 @@
       }
     },
     {
-      "id": 5,
-      "type": "row",
-      "title": "Uptime dan host",
-      "gridPos": {
-        "x": 0,
-        "y": 22,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 6,
-      "title": "Health API publik dan Track staging",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 23,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "probe_success",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 7,
-      "title": "Uptime host (detik)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 30,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "time() - node_boot_time_seconds",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 8,
-      "title": "RAM terpakai (rasio)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 37,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "1-node_memory_MemAvailable_bytes/node_memory_MemTotal_bytes",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 9,
-      "title": "Disk terpakai (rasio)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 44,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "1-node_filesystem_avail_bytes{mountpoint=\"/\"}/node_filesystem_size_bytes{mountpoint=\"/\"}",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 10,
-      "title": "Service backend aktif",
+      "id": 30,
+      "title": "BACKUP TERAKHIR",
+      "description": "Umur backup yang berhasil diverifikasi. Batas peringatan 26 jam; unknown berarti bukti tidak tersedia.",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 51,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "node_systemd_unit_state{name=\"podorukun-si-api.service\",state=\"active\"}",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "colorMode": "background",
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        }
-      }
-    },
-    {
-      "id": 11,
-      "type": "row",
-      "title": "API",
-      "gridPos": {
-        "x": 0,
-        "y": 58,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 12,
-      "title": "Request per detik",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 59,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(api_requests_total[5m])",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 13,
-      "title": "Error 5xx per detik",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 66,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "rate(api_errors_5xx_total[5m])",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 14,
-      "title": "Latensi p95 (detik)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 73,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "histogram_quantile(0.95, sum by(le)(rate(api_request_duration_seconds_bucket[5m])))",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 15,
-      "type": "row",
-      "title": "Sinkronisasi Track ↔ PRSI",
-      "gridPos": {
-        "x": 0,
-        "y": 80,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 16,
-      "title": "Status entitas: 1 cocok, 0 mismatch, -1 pending",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 81,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sync_entity_match",
-          "legendFormat": "{{entity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 17,
-      "title": "Jumlah baris Track",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 88,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sync_entity_rows_track",
-          "legendFormat": "{{entity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 18,
-      "title": "Jumlah baris PRSI",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 95,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sync_entity_rows_prsi",
-          "legendFormat": "{{entity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 19,
-      "title": "Umur siklus terakhir / held / beda teramati",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 102,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "{__name__=~\"sync_last_cycle_age_seconds|sync_held_seconds|sync_observed_difference_seconds\"}",
-          "legendFormat": "{{__name__}} {{entity}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 20,
-      "title": "Galat sinkron belum selesai",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 109,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "sync_error_unresolved",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 21,
-      "type": "row",
-      "title": "Integritas pembukuan",
-      "gridPos": {
-        "x": 0,
-        "y": 116,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 22,
-      "title": "Jumlah pelanggaran — target 0",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 117,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "accounting_invariant_violations",
-          "legendFormat": "{{invariant}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 23,
-      "title": "Umur cache pemeriksaan (detik)",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 124,
-        "w": 24,
-        "h": 7
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "expr": "monitor_collection_age_seconds",
-          "legendFormat": "{{instance}}"
-        }
-      ],
-      "fieldConfig": {
-        "defaults": {
-          "noValue": "UNKNOWN",
-          "color": {
-            "mode": "thresholds"
-          },
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "red",
-                "value": null
-              },
-              {
-                "color": "green",
-                "value": 1
-              }
-            ]
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "legend": {
-          "displayMode": "list",
-          "placement": "bottom"
-        }
-      }
-    },
-    {
-      "id": 24,
-      "type": "row",
-      "title": "Backup",
-      "gridPos": {
-        "x": 0,
-        "y": 131,
-        "w": 24,
-        "h": 1
-      },
-      "collapsed": false
-    },
-    {
-      "id": 25,
-      "title": "Umur backup (detik) — batas 93600",
-      "type": "timeseries",
-      "gridPos": {
-        "x": 0,
-        "y": 132,
-        "w": 24,
-        "h": 7
+        "x": 18,
+        "y": 0,
+        "w": 6,
+        "h": 3
       },
       "datasource": {
         "type": "prometheus",
@@ -1019,12 +330,37 @@
         {
           "refId": "A",
           "expr": "backup_last_age_seconds",
-          "legendFormat": "{{instance}}"
+          "legendFormat": "Umur backup",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "UNKNOWN",
+          "unit": "s",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
@@ -1032,12 +368,437 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 86400,
+                "color": "orange"
+              },
+              {
+                "value": 93600,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 31,
+      "title": "Track staging ↔ PRSI",
+      "description": "Setiap entitas: cocok, beda isi terkonfirmasi, atau pending. Pemeriksaan berjalan setiap dua menit.",
+      "type": "stat",
+      "gridPos": {
+        "x": 0,
+        "y": 3,
+        "w": 12,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sync_entity_match",
+          "legendFormat": "{{entity}}",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "BEDA"
+                },
+                "1": {
+                  "text": "COCOK"
+                },
+                "-1": {
+                  "text": "PENDING"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "orange"
+              },
+              {
+                "value": 0,
+                "color": "red"
+              },
+              {
+                "value": 1,
+                "color": "green"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 32,
+      "title": "Kapasitas server",
+      "description": "Aplikasi = VPS backend; Monitor = VPS monitoring. Hijau <80%, kuning 80–90%, merah ≥90%.",
+      "type": "bargauge",
+      "gridPos": {
+        "x": 12,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1-node_memory_MemAvailable_bytes{instance=\"10.11.26.196:9100\"}/node_memory_MemTotal_bytes{instance=\"10.11.26.196:9100\"}",
+          "legendFormat": "RAM · Aplikasi",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "expr": "1-node_memory_MemAvailable_bytes{instance=\"127.0.0.1:9100\"}/node_memory_MemTotal_bytes{instance=\"127.0.0.1:9100\"}",
+          "legendFormat": "RAM · Monitor",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "expr": "1-node_filesystem_avail_bytes{mountpoint=\"/\",instance=\"10.11.26.196:9100\"}/node_filesystem_size_bytes{mountpoint=\"/\",instance=\"10.11.26.196:9100\"}",
+          "legendFormat": "Disk · Aplikasi",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "D",
+          "expr": "1-node_filesystem_avail_bytes{mountpoint=\"/\",instance=\"127.0.0.1:9100\"}/node_filesystem_size_bytes{mountpoint=\"/\",instance=\"127.0.0.1:9100\"}",
+          "legendFormat": "Disk · Monitor",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 0.8,
+                "color": "orange"
+              },
+              {
+                "value": 0.9,
+                "color": "red"
+              }
+            ]
+          },
+          "decimals": 0,
+          "min": 0,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "displayMode": "basic",
+        "showUnfilled": true,
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 33,
+      "title": "API · 5 menit terakhir",
+      "description": "Latensi kosong saat belum ada request dalam jendela lima menit. Ini bukan bukti API mati; lihat status layanan.",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 3,
+        "w": 6,
+        "h": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(api_requests_total[5m])",
+          "legendFormat": "Request / detik",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "expr": "rate(api_errors_5xx_total[5m])",
+          "legendFormat": "Error 5xx / detik",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "expr": "histogram_quantile(0.95, sum by(le)(rate(api_request_duration_seconds_bucket[5m])))",
+          "legendFormat": "Latensi p95",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "BELUM ADA SAMPEL",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM ADA SAMPEL",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM ADA SAMPEL",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "blue"
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Latensi p95"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 34,
+      "title": "Lalu lintas API",
+      "description": "Tren request dan error server. Gunakan rentang waktu di pojok kanan atas.",
+      "type": "timeseries",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(api_requests_total[5m])",
+          "legendFormat": "Request / detik",
+          "instant": false,
+          "range": true
+        },
+        {
+          "refId": "B",
+          "expr": "rate(api_errors_5xx_total[5m])",
+          "legendFormat": "Error 5xx / detik",
+          "instant": false,
+          "range": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "palette-classic"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "blue"
               }
             ]
           }
@@ -1048,18 +809,22 @@
         "legend": {
           "displayMode": "list",
           "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
         }
       }
     },
     {
-      "id": 26,
-      "title": "Bukti backup tersedia",
+      "id": 35,
+      "title": "Galat & pelanggaran",
+      "description": "Target semua nol. Rincian jenis pelanggaran tersedia dalam bagian yang dapat dibuka di bawah.",
       "type": "stat",
       "gridPos": {
-        "x": 0,
-        "y": 139,
-        "w": 24,
-        "h": 7
+        "x": 12,
+        "y": 8,
+        "w": 6,
+        "h": 4
       },
       "datasource": {
         "type": "prometheus",
@@ -1068,13 +833,52 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "backup_timestamp_available",
-          "legendFormat": "{{instance}}"
+          "expr": "sum(accounting_invariant_violations)",
+          "legendFormat": "Pelanggaran",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "expr": "sync_error_unresolved",
+          "legendFormat": "Galat sinkron",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "C",
+          "expr": "outbox_failed",
+          "legendFormat": "Outbox gagal",
+          "instant": true,
+          "range": false
         }
       ],
       "fieldConfig": {
         "defaults": {
-          "noValue": "UNKNOWN",
+          "unit": "short",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
           "color": {
             "mode": "thresholds"
           },
@@ -1082,12 +886,12 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "red",
-                "value": null
+                "value": null,
+                "color": "green"
               },
               {
-                "color": "green",
-                "value": 1
+                "value": 1,
+                "color": "red"
               }
             ]
           }
@@ -1095,7 +899,16 @@
         "overrides": []
       },
       "options": {
-        "colorMode": "background",
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
         "reduceOptions": {
           "calcs": [
             "lastNotNull"
@@ -1104,6 +917,1140 @@
           "values": false
         }
       }
+    },
+    {
+      "id": 36,
+      "title": "Kesegaran pemeriksaan",
+      "description": "Umur cache ideal ≤5 menit; held berarti sinkronisasi tertahan. Umur siklus terakhir bukan umur event sumber dan tersedia di rincian.",
+      "type": "stat",
+      "gridPos": {
+        "x": 18,
+        "y": 8,
+        "w": 6,
+        "h": 4
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "monitor_collection_age_seconds",
+          "legendFormat": "Umur pemeriksaan",
+          "instant": true,
+          "range": false
+        },
+        {
+          "refId": "B",
+          "expr": "sync_held_seconds",
+          "legendFormat": "Tertahan",
+          "instant": true,
+          "range": false
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "BELUM DIKETAHUI",
+          "mappings": [
+            {
+              "type": "special",
+              "options": {
+                "match": "null",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            },
+            {
+              "type": "special",
+              "options": {
+                "match": "nan",
+                "result": {
+                  "text": "BELUM DIKETAHUI",
+                  "color": "gray"
+                }
+              }
+            }
+          ],
+          "color": {
+            "mode": "thresholds"
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "value": null,
+                "color": "green"
+              },
+              {
+                "value": 600,
+                "color": "orange"
+              },
+              {
+                "value": 660,
+                "color": "red"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "orientation": "auto",
+        "wideLayout": true,
+        "justifyMode": "auto",
+        "text": {
+          "titleSize": 12,
+          "valueSize": 24
+        },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "row",
+      "title": "Rincian · jumlah baris, aturan pembukuan, uptime & riwayat",
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 1
+      },
+      "collapsed": true,
+      "panels": [
+        {
+          "id": 2,
+          "title": "Semua target dapat di-scrape",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 13,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "min(up)",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 3,
+          "title": "Integritas tersedia dan tanpa pelanggaran",
+          "type": "stat",
+          "gridPos": {
+            "x": 12,
+            "y": 13,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "(min(monitor_collection_success) == bool 1) * (max(accounting_invariant_violations) == bool 0)",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 4,
+          "title": "Tujuh entitas cocok — pending/unknown bukan sehat",
+          "type": "stat",
+          "gridPos": {
+            "x": 0,
+            "y": 20,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sum(sync_entity_match == bool 1) == bool 7",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 6,
+          "title": "Health API publik dan Track staging",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 20,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "probe_success",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 7,
+          "title": "Uptime host (detik)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 27,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "time() - node_boot_time_seconds",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 8,
+          "title": "RAM terpakai (rasio)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 27,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "1-node_memory_MemAvailable_bytes/node_memory_MemTotal_bytes",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 9,
+          "title": "Disk terpakai (rasio)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 34,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "1-node_filesystem_avail_bytes{mountpoint=\"/\"}/node_filesystem_size_bytes{mountpoint=\"/\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 10,
+          "title": "Service backend aktif",
+          "type": "stat",
+          "gridPos": {
+            "x": 12,
+            "y": 34,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "node_systemd_unit_state{name=\"podorukun-si-api.service\",state=\"active\"}",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        },
+        {
+          "id": 12,
+          "title": "Request per detik",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 41,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(api_requests_total[5m])",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 13,
+          "title": "Error 5xx per detik",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 41,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "rate(api_errors_5xx_total[5m])",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 14,
+          "title": "Latensi p95 (detik)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 48,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "histogram_quantile(0.95, sum by(le)(rate(api_request_duration_seconds_bucket[5m])))",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 16,
+          "title": "Status entitas: 1 cocok, 0 mismatch, -1 pending",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 48,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sync_entity_match",
+              "legendFormat": "{{entity}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 17,
+          "title": "Jumlah baris Track",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 55,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sync_entity_rows_track",
+              "legendFormat": "{{entity}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 18,
+          "title": "Jumlah baris PRSI",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 55,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sync_entity_rows_prsi",
+              "legendFormat": "{{entity}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 19,
+          "title": "Umur siklus terakhir / held / beda teramati",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 62,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "{__name__=~\"sync_last_cycle_age_seconds|sync_held_seconds|sync_observed_difference_seconds\"}",
+              "legendFormat": "{{__name__}} {{entity}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 20,
+          "title": "Galat sinkron belum selesai",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 62,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "sync_error_unresolved",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 22,
+          "title": "Jumlah pelanggaran — target 0",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 69,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "accounting_invariant_violations",
+              "legendFormat": "{{invariant}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 23,
+          "title": "Umur cache pemeriksaan (detik)",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 12,
+            "y": 69,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "monitor_collection_age_seconds",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 25,
+          "title": "Umur backup (detik) — batas 93600",
+          "type": "timeseries",
+          "gridPos": {
+            "x": 0,
+            "y": 76,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "backup_last_age_seconds",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "legend": {
+              "displayMode": "list",
+              "placement": "bottom"
+            }
+          }
+        },
+        {
+          "id": 26,
+          "title": "Bukti backup tersedia",
+          "type": "stat",
+          "gridPos": {
+            "x": 12,
+            "y": 76,
+            "w": 12,
+            "h": 7
+          },
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "targets": [
+            {
+              "refId": "A",
+              "expr": "backup_timestamp_available",
+              "legendFormat": "{{instance}}"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "noValue": "UNKNOWN",
+              "color": {
+                "mode": "thresholds"
+              },
+              "thresholds": {
+                "mode": "absolute",
+                "steps": [
+                  {
+                    "color": "red",
+                    "value": null
+                  },
+                  {
+                    "color": "green",
+                    "value": 1
+                  }
+                ]
+              }
+            },
+            "overrides": []
+          },
+          "options": {
+            "colorMode": "background",
+            "reduceOptions": {
+              "calcs": [
+                "lastNotNull"
+              ],
+              "fields": "",
+              "values": false
+            }
+          }
+        }
+      ]
     }
   ]
 }
