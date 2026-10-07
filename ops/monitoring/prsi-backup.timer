@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily PRSI backup at 02:00 Jakarta time
+
+[Timer]
+OnCalendar=*-*-* 02:00:00 Asia/Jakarta
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
