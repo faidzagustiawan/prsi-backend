@@ -14,6 +14,7 @@ import { checksum } from './monitoring/checksum.js';
 import { createCollector } from './monitoring/collector.js';
 import { apiMetrics } from './monitoring/metrics.js';
 import authPlugin from './plugins/auth.js';
+import { csrfGuard } from './middleware/csrf.js';
 import validatorPlugin from './plugins/validator.js';
 import swaggerPlugin from './plugins/swagger.js';
 import redisPlugin from './plugins/redis.js';
@@ -66,12 +67,15 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
       err.statusCode = 403;
       return cb(err, false);
     },
+    // Origin dipantulkan; kredensial didukung agar fetch credentials:include tetap kompatibel.
+    // Guard CSRF tetap memeriksa origin untuk mutasi yang hanya memakai cookie.
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
   });
 
   await app.register(fastifyCookie, { secret: env.cookieSecret, hook: 'onRequest' });
+  app.addHook('preValidation', csrfGuard([...env.frontendUrls, new URL(env.apiUrl).origin]));
 
   await app.register(fastifyHelmet, {
     contentSecurityPolicy: {

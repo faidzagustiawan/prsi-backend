@@ -1,0 +1,2 @@
+ALTER TABLE "finance"."refresh_tokens" ADD COLUMN "credential_hash" text;--> statement-breakpoint
+ALTER TABLE "finance"."master_pt" ADD CONSTRAINT "master_pt_track_company_id_unique" UNIQUE("track_company_id");

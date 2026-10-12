@@ -6,6 +6,7 @@
 // (hutang, modal, pendapatan) positif bila kredit > debit.
 import { sql } from 'drizzle-orm';
 import { z } from 'zod';
+import { AppError } from '../../shared/utils/AppError.js';
 import { reportDb } from '../../config/database.js';
 import { validate } from '../../middleware/validate.js';
 import { keuanganOnly } from '../../middleware/authorize.js';
@@ -35,7 +36,7 @@ export default async function laporanRoutes(fastify) {
       WITH sa AS (
         SELECT s.akun_id, SUM(s.debit) d, SUM(s.kredit) k
         FROM finance.saldo_awal s JOIN finance.saldo_awal_periode p ON p.id = s.periode_id
-        WHERE TRUE ${proyekSa}
+        WHERE p.tanggal_mulai <= ${sampai} ${proyekSa}
         GROUP BY s.akun_id
       ), mut AS (
         SELECT jd.akun_id, SUM(jd.debit) d, SUM(jd.kredit) k
@@ -73,6 +74,7 @@ export default async function laporanRoutes(fastify) {
     schema: { tags, description: 'Buku besar satu akun: saldo awal per tanggal "dari" dan mutasi dengan saldo berjalan' },
   }, async (request) => {
     const { akunId, proyekId, kodePembantuId, dari, sampai } = request.query;
+    if (dari > sampai) throw new AppError('Tanggal mulai tidak boleh melewati tanggal akhir.', 422);
     const proyekSa = proyekId ? sql`AND p.proyek_id = ${proyekId}` : sql``;
     const proyekJ = proyekId ? sql`AND j.proyek_id = ${proyekId}` : sql``;
     const kpSa = kodePembantuId ? sql`AND s.kode_pembantu_id = ${kodePembantuId}` : sql``;
@@ -82,7 +84,7 @@ export default async function laporanRoutes(fastify) {
       SELECT ${signed(sql`COALESCE(SUM(x.d), 0)`, sql`COALESCE(SUM(x.k), 0)`)} saldo
       FROM finance.akun a, (
         SELECT s.debit d, s.kredit k FROM finance.saldo_awal s JOIN finance.saldo_awal_periode p ON p.id = s.periode_id
-        WHERE s.akun_id = ${akunId} ${proyekSa} ${kpSa}
+        WHERE s.akun_id = ${akunId} AND p.tanggal_mulai < ${dari} ${proyekSa} ${kpSa}
         UNION ALL
         SELECT jd.debit, jd.kredit FROM finance.jurnal_detail jd JOIN finance.jurnal j ON j.id = jd.jurnal_id
         WHERE jd.akun_id = ${akunId} AND j.status IN (${terbuku}) AND j.tanggal < ${dari} ${proyekJ} ${kpJ}
@@ -97,7 +99,14 @@ export default async function laporanRoutes(fastify) {
       JOIN finance.jurnal j ON j.id = jd.jurnal_id
       JOIN finance.akun a ON a.id = jd.akun_id
       WHERE jd.akun_id = ${akunId} AND j.status IN (${terbuku}) AND j.tanggal BETWEEN ${dari} AND ${sampai} ${proyekJ} ${kpJ}
-      ORDER BY j.tanggal, j.no_bukti, jd.urutan
+      UNION ALL
+      SELECT NULL::uuid jurnal_id, 'SALDO AWAL' no_bukti, p.tanggal_mulai tanggal, 'Saldo awal' uraian,
+             'saldo_awal' sumber, 'Saldo awal' keterangan, s.kode_pembantu_id, s.debit, s.kredit,
+             ${signed(sql`s.debit`, sql`s.kredit`)} gerak
+      FROM finance.saldo_awal s JOIN finance.saldo_awal_periode p ON p.id = s.periode_id
+      JOIN finance.akun a ON a.id = s.akun_id
+      WHERE s.akun_id = ${akunId} AND p.tanggal_mulai BETWEEN ${dari} AND ${sampai} ${proyekSa} ${kpSa}
+      ORDER BY tanggal, no_bukti
     `);
 
     let saldo = n(awal?.saldo);

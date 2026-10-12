@@ -6,7 +6,8 @@ import { and, asc, eq, isNull, ne } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
 import { masterPt, jurnal, periode } from '../../shared/schemas/akuntansi.schema.js';
-import { trkProjects } from '../../shared/schemas/track.schema.js';
+import { trkProjects, trkCompanies } from '../../shared/schemas/track.schema.js';
+import { assertCompanyMapping } from './master-pt.service.js';
 import { validate, validatePatch } from '../../middleware/validate.js';
 import { keuanganOnly, actorOf } from '../../middleware/authorize.js';
 import { idParams, uuidSchema, optionalText } from '../../shared/utils/zod.js';
@@ -17,6 +18,7 @@ const tags = ['Master PT'];
 
 const toDto = (r) => ({
   id: r.id,
+  trackCompanyId: r.trackCompanyId,
   namaPt: r.namaPt,
   singkatan: r.singkatan,
   namaDirektur: r.namaDirektur,
@@ -30,6 +32,7 @@ const toDto = (r) => ({
 });
 
 const fields = {
+  trackCompanyId: uuidSchema.optional().nullable(),
   namaPt: z.string().trim().min(1, 'Nama PT wajib diisi').max(150),
   singkatan: optionalText(20),
   namaDirektur: z.string().trim().min(1, 'Nama direktur wajib diisi').max(150),
@@ -42,6 +45,7 @@ const fields = {
 
 const toColumns = (b) => {
   const out = {};
+  if ('trackCompanyId' in b) out.trackCompanyId = b.trackCompanyId;
   for (const key of ['namaPt', 'singkatan', 'namaDirektur', 'ttl', 'pekerjaan', 'alamat']) if (key in b) out[key] = b[key];
   if ('noKtp' in b) out.noKtp = b.noKtp || null;
   if ('perumahanId' in b) out.proyekId = b.perumahanId || null;
@@ -50,6 +54,7 @@ const toColumns = (b) => {
 
 const LABELS = {
   namaPt: 'Nama PT', singkatan: 'Singkatan', namaDirektur: 'Nama direktur', ttl: 'Tempat, tanggal lahir',
+  trackCompanyId: 'Company PRTrack',
   pekerjaan: 'Pekerjaan', alamat: 'Alamat', noKtp: 'No. KTP', proyekId: 'Perumahan',
 };
 
@@ -73,6 +78,11 @@ async function findActive(tx, id) {
 export default async function masterPtRoutes(fastify) {
   const guard = keuanganOnly(fastify);
 
+  fastify.get('/companies', { preHandler: guard, schema: { tags, description: 'Company aktif PRTrack; id lokal dipakai sebagai trackCompanyId, trackId adalah ID sumber' } }, async () => ({
+    success: true, message: 'Success', data: await db.select({ id: trkCompanies.id, trackId: trkCompanies.trackId, nama: trkCompanies.nama, kode: trkCompanies.kode })
+      .from(trkCompanies).where(eq(trkCompanies.isDeleted, false)).orderBy(asc(trkCompanies.nama)),
+  }));
+
   fastify.get('/', { preHandler: guard, schema: { tags, description: 'Daftar PT' } }, async () => {
     const rows = await db.select().from(masterPt).where(isNull(masterPt.deletedAt)).orderBy(asc(masterPt.namaPt));
     return { success: true, message: 'Success', data: rows.map(toDto) };
@@ -89,6 +99,7 @@ export default async function masterPtRoutes(fastify) {
     const row = await db.transaction(async (tx) => {
       const values = toColumns(request.body);
       await assertProyek(tx, values.proyekId);
+      await assertCompanyMapping(tx, values);
       const [created] = await tx.insert(masterPt).values(values).returning();
       await recordAuditTx(tx, { ...actor, action: AuditAction.CREATE, entity: 'master_pt', entityId: created.id, summary: created.namaPt });
       return created;
@@ -105,6 +116,7 @@ export default async function masterPtRoutes(fastify) {
       const before = await findActive(tx, request.params.id);
       const values = toColumns(request.body);
       if ('proyekId' in values) await assertProyek(tx, values.proyekId, before.id);
+      await assertCompanyMapping(tx, { ...before, ...values }, before.id);
       const [updated] = await tx.update(masterPt).set({ ...values, updatedAt: new Date() })
         .where(eq(masterPt.id, before.id)).returning();
       await recordFieldChanges(tx, { ...actor, entity: 'master_pt', entityId: before.id, before, after: values, labels: LABELS });
@@ -130,4 +142,3 @@ export default async function masterPtRoutes(fastify) {
     return { success: true, message: 'PT dihapus' };
   });
 }
-

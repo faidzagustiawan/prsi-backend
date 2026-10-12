@@ -17,7 +17,7 @@ export async function findAssignment(tx, id) {
     .innerJoin(trkCustomers, eq(trkCustomers.id, trkAssignments.customerId))
     .where(eq(trkAssignments.id, id))
     .limit(1);
-  if (!row || row.a.isDeleted) throw new AppError('Penjualan (PR Track) tidak ditemukan.', 422);
+  if (!row || row.a.isDeleted || row.unit.isDeleted || row.customer.isDeleted) throw new AppError('Penjualan (PR Track) tidak ditemukan.', 422);
   return row;
 }
 

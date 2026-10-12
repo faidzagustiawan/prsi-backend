@@ -38,6 +38,7 @@ function toDto(d, { unit, pasals = [], riwayat = [], files = [], berlakuIds = ne
     ptId: d.ptId,
     // FE: kavlingId / perumahanId
     kavlingId: d.unitId,
+    kavlingNomor: unit?.kode ?? null,
     kavling: unit ? { id: unit.id, kode: unit.kode, tipe: unit.tipe, luasTanah: toNumber(unit.luasTanah), luasBangunan: toNumber(unit.luasBangunan) } : null,
     perumahanId: unit?.projectId ?? null,
     assignmentId: d.assignmentId,
@@ -133,6 +134,7 @@ async function pilihTemplate(tx, { templateId, ptId, tipe }) {
   if (templateId) {
     const [t] = await tx.select().from(templateDokumen).where(eq(templateDokumen.id, templateId)).limit(1);
     if (!t) throw new AppError('Template tidak ditemukan.', 422);
+    if (!t.aktif) throw new AppError('Template nonaktif tidak dapat digunakan.', 422);
     if (t.ptId !== ptId || t.tipeTransaksi !== tipe) throw new AppError('Template tidak cocok dengan PT dan tipe transaksi.', 422);
     return t;
   }
@@ -155,6 +157,7 @@ export async function create(actor, b) {
     if (!pt || pt.deletedAt) throw new AppError('PT tidak ditemukan.', 422);
     const [unit] = await tx.select().from(trkUnits).where(eq(trkUnits.id, b.kavlingId)).limit(1);
     if (!unit || unit.isDeleted) throw new AppError('Kavling tidak ditemukan.', 422);
+    if (pt.proyekId !== unit.projectId) throw new AppError('PT tidak terhubung ke proyek kavling ini.', 422);
 
     let tipe = b.tipeTransaksi;
     let pembeliDefault = {};
@@ -369,6 +372,8 @@ export async function finalisasi(actor, id) {
 
     const { a, unit, customer } = await findAssignment(tx, d.assignmentId);
     if (a.unitId !== d.unitId) throw new AppError('Penjualan PR Track bukan untuk kavling dokumen ini.', 422);
+    const [pt] = await tx.select().from(masterPt).where(eq(masterPt.id, d.ptId)).limit(1);
+    if (!pt || pt.deletedAt || pt.proyekId !== unit.projectId) throw new AppError('PT tidak terhubung ke proyek kavling ini.', 422);
 
     const [existing] = await tx.select().from(penjualanKeuangan).where(eq(penjualanKeuangan.assignmentId, a.id)).for('update').limit(1);
     if (existing?.dokumenId && existing.status === 'aktif') {
@@ -444,4 +449,3 @@ export async function penjualanTersedia({ proyekId }) {
     pembeli: { nama: r.nama, noHp: r.no_hp ?? '', alamat: r.alamat ?? '' },
   }));
 }
-

@@ -22,7 +22,7 @@ const setAuthCookies = (reply, tokens) => {
     httpOnly: true,
     secure,
     sameSite: 'strict',
-    maxAge: service.REFRESH_TTL_SEC,
+    maxAge: tokens.refreshExpiresIn,
   });
 };
 
@@ -34,6 +34,7 @@ const tokenBody = (tokens) => ({
   refreshToken: tokens.refreshToken,
   tokenType: 'Bearer',
   expiresIn: ACCESS_TTL_SEC,
+  refreshExpiresIn: tokens.refreshExpiresIn,
 });
 
 // Refresh token dari body (klien Bearer) atau cookie (klien sesitus)
@@ -62,17 +63,20 @@ export const loginHandler = async (request, reply) => {
 };
 
 export const refreshHandler = async (request, reply) => {
-  try {
-    const tokens = await service.refreshSession(refreshTokenFrom(request), request.server);
-    setAuthCookies(reply, tokens);
-    return reply.code(200).send({ success: true, message: 'Sesi diperbarui', data: tokenBody(tokens) });
-  } catch (error) {
-    clearAuthCookies(reply);
-    throw error;
-  }
+  // Refresh paralel yang kalah tidak boleh menghapus cookie pemenang.
+  const tokens = await service.refreshSession(refreshTokenFrom(request), request.server);
+  setAuthCookies(reply, tokens);
+  return reply.code(200).send({ success: true, message: 'Sesi diperbarui', data: tokenBody(tokens) });
 };
 
 export const logoutHandler = async (request, reply) => {
+  // JWT sesi juga mencabut hasil rotasi bila logout beradu dengan refresh.
+  try {
+    await request.jwtVerify();
+    await service.logoutSession(request.user);
+  } catch (error) {
+    if (!error.code?.includes('JWT') && error.statusCode !== 401) throw error;
+  }
   await service.logoutUser(refreshTokenFrom(request));
   clearAuthCookies(reply);
   return reply.code(200).send({ success: true, message: 'Logout berhasil' });

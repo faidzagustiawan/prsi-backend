@@ -147,6 +147,9 @@ async function resolveHeader(tx, input, errors) {
       errors.push('Proyek tidak ditemukan.');
     } else {
       ptId = await repo.findPtByProyek(input.proyekId, tx);
+      if (ptId && await repo.isPeriodeTerkunci(ptId, input.tanggal, tx)) {
+        errors.push(`Periode ${input.tanggal.slice(0, 7)} sudah dikunci.`);
+      }
       const saldoAwal = await repo.findSaldoAwalPeriode(input.proyekId, tx);
       if (saldoAwal && input.tanggal < saldoAwal.tanggalMulai) {
         errors.push(`Tanggal jurnal sebelum tanggal mulai saldo awal proyek (${saldoAwal.tanggalMulai}).`);

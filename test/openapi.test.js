@@ -23,6 +23,9 @@ vi.mock('../src/config/env.js', () => ({
   JWT_AUDIENCE: 'podorukun-si', JWT_ISSUER: 'podorukun-si-api',
 }));
 vi.mock('../src/config/database.js', () => ({ db: {}, reportDb: {}, reportClient: {}, sessionClient: {} }));
+vi.mock('../src/modules/auth/auth.service.js', () => ({
+  validateSession: vi.fn(async (claims) => ({ id: claims.sub, role: claims.role, status: 'active' })),
+}));
 
 const { buildApp } = await import('../src/app.js');
 let app;
@@ -56,6 +59,16 @@ describe('OpenAPI contract', () => {
     expect(document.paths['/api/v1/jurnal'].get['x-roles']).toEqual(['keuangan']);
     expect(document.paths['/api/v1/sinkron/status'].get['x-roles']).toEqual(['keuangan', 'admin']);
     expect(document.components.securitySchemes.accessCookie.name).toBe('si_access_token');
+  });
+
+  it('requires authenticated finance role on every business operation', () => {
+    for (const [path, item] of Object.entries(document.paths)) {
+      if (!path.startsWith('/api/v1/') || path.startsWith('/api/v1/auth/')) continue;
+      for (const operation of Object.values(item)) {
+        expect(operation.security).toEqual([{ bearerAuth: [] }, { accessCookie: [] }]);
+        expect([...operation['x-roles']].sort()).toEqual(path.startsWith('/api/v1/sinkron/') ? ['admin', 'keuangan'] : ['keuangan']);
+      }
+    }
   });
 
   it('retains client input fields, query constraints and optional PATCH fields', () => {
@@ -99,7 +112,7 @@ describe('OpenAPI contract', () => {
     expect((await app.inject('/api/v1/jurnal')).statusCode).toBe(401);
     const cookie = (role) => `si_access_token=${app.jwt.sign({ sub: '11111111-1111-4111-8111-111111111111', role })}`;
     expect((await app.inject({ url: '/api/v1/jurnal', headers: { cookie: cookie('admin') } })).statusCode).toBe(403);
-    const invalid = await app.inject({ method: 'POST', url: '/api/v1/jurnal', headers: { cookie: cookie('keuangan') }, payload: {} });
+    const invalid = await app.inject({ method: 'POST', url: '/api/v1/jurnal', headers: { cookie: cookie('keuangan'), origin: 'https://podorukunsi.my.id' }, payload: {} });
     expect(invalid.statusCode).toBe(400);
     expect(invalid.json().errors[0]).toHaveProperty('field');
   });

@@ -30,13 +30,15 @@ export const globalErrorHandler = (error, request, reply) => {
   }
 
   // PostgreSQL error codes
-  if (error.code === '23505') {
-    statusCode = 400;
+  const pgError = error.cause ?? error;
+  const pgCode = pgError.code;
+  if (pgCode === '23505') {
+    statusCode = pgError.constraint_name === 'master_pt_track_company_id_unique' ? 409 : 400;
     message = 'Data tersebut sudah terdaftar di sistem.';
-  } else if (error.code === '23503') {
+  } else if (pgCode === '23503') {
     statusCode = 400;
     message = 'Tindakan tidak dapat dilakukan karena data ini masih terhubung dengan data lain.';
-  } else if (error.code === '42501') {
+  } else if (pgCode === '42501') {
     // insufficient_privilege: role SI mencoba menyentuh objek di luar haknya
     statusCode = 500;
     message = 'Terjadi kesalahan pada server.';

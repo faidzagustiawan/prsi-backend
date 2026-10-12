@@ -10,11 +10,13 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "vitest run",
+    "test:integration": "node --test test/integration.backend.js",
     "lint": "eslint src scripts",
     "db:generate": "drizzle-kit generate",
     "db:check": "node scripts/check-migrations.js",
     "db:migrate": "node scripts/check-migrations.js && drizzle-kit migrate",
     "user:create": "node scripts/create-user.js",
+    "user:security": "node scripts/update-user-security.js",
     "seed:dev": "node scripts/seed-dev.js",
     "worker": "node src/worker.js",
     "mock:track": "node scripts/mock-track.js"

@@ -136,7 +136,7 @@ export default async function shmRoutes(fastify) {
     const actor = actorOf(request);
     const b = request.body;
     const id = await db.transaction(async (tx) => {
-      const [unit] = await tx.select({ id: trkUnits.id }).from(trkUnits).where(eq(trkUnits.id, b.unitId)).limit(1);
+      const [unit] = await tx.select({ id: trkUnits.id }).from(trkUnits).where(and(eq(trkUnits.id, b.unitId), eq(trkUnits.isDeleted, false))).limit(1);
       if (!unit) throw new AppError('Kavling tidak ditemukan.', 404);
       const [dupe] = await tx.select({ id: dokumenLegalKavling.id, unitId: dokumenLegalKavling.unitId, noShm: dokumenLegalKavling.noShm })
         .from(dokumenLegalKavling).where(eq(dokumenLegalKavling.unitId, b.unitId)).limit(1);
@@ -217,4 +217,3 @@ export default async function shmRoutes(fastify) {
     return { success: true, message: 'SHM dihapus' };
   });
 }
-

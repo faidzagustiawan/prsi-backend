@@ -37,13 +37,13 @@ export async function saldoKodePembantu({ bulan, proyekId, kategori, akunKategor
 
   const rows = await reportDb.execute(sql`
     WITH gerak AS (
-      SELECT s.kode_pembantu_id kp_id, DATE '0001-01-01' tanggal, s.debit d, s.kredit k, a.tipe_saldo
-      FROM finance.saldo_awal s JOIN finance.akun a ON a.id = s.akun_id
-      WHERE s.kode_pembantu_id IS NOT NULL ${akunFilter}
+      SELECT s.kode_pembantu_id kp_id, p.tanggal_mulai tanggal, s.debit d, s.kredit k, a.tipe_saldo
+      FROM finance.saldo_awal s JOIN finance.akun a ON a.id = s.akun_id JOIN finance.saldo_awal_periode p ON p.id = s.periode_id
+      WHERE s.kode_pembantu_id IS NOT NULL AND p.tanggal_mulai < ${end} ${proyekId ? sql`AND p.proyek_id = ${proyekId}` : sql``} ${akunFilter}
       UNION ALL
       SELECT jd.kode_pembantu_id, j.tanggal, jd.debit, jd.kredit, a.tipe_saldo
       FROM finance.jurnal_detail jd JOIN finance.jurnal j ON j.id = jd.jurnal_id JOIN finance.akun a ON a.id = jd.akun_id
-      WHERE jd.kode_pembantu_id IS NOT NULL AND j.status IN (${terbuku}) AND j.tanggal < ${end} ${akunFilter}
+      WHERE jd.kode_pembantu_id IS NOT NULL AND j.status IN (${terbuku}) AND j.tanggal < ${end} ${proyekId ? sql`AND j.proyek_id = ${proyekId}` : sql``} ${akunFilter}
     )
     SELECT kp.id, kp.kode, kp.nama, kp.kategori, kp.proyek_id, kp.proyek_lawan_id, kp.aktif,
       COALESCE(SUM(CASE WHEN g.tanggal < ${start} THEN CASE WHEN g.tipe_saldo = 'k' THEN g.k - g.d ELSE g.d - g.k END END), 0) saldo_awal,

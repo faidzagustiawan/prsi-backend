@@ -39,7 +39,7 @@ export const env = {
   cookieSecret: process.env.COOKIE_SECRET,
   redisUrl: process.env.REDIS_URL || 'redis://localhost:6379',
   frontendUrls: process.env.FRONTEND_URL
-    ? process.env.FRONTEND_URL.split(',')
+    ? process.env.FRONTEND_URL.split(',').map((origin) => origin.trim()).filter(Boolean)
     : ['http://localhost:5174'],
   corsAllowAll: process.env.CORS_ALLOW_ALL === 'true',
   apiUrl: process.env.API_URL || 'http://localhost:3100',

@@ -16,6 +16,8 @@
 import { and, asc, eq, inArray } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '../../config/database.js';
+import { masterPt } from '../../shared/schemas/akuntansi.schema.js';
+import { trkUnits } from '../../shared/schemas/track.schema.js';
 import { dokumen, dokumenPasal, penjualanKeuangan, jadwalAngsuran, outboxTrack } from '../../shared/schemas/penjualan.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { toCents, centsToString, toNumber } from '../../shared/utils/money.js';
@@ -48,6 +50,9 @@ export async function buat(actor, indukId, { alasan, biayaPindah = 0, tanggal })
     if (draft) throw new AppError(`Masih ada adendum draft ${draft.no}. Selesaikan atau hapus dulu.`, 409);
 
     const { a } = await findAssignment(tx, induk.assignmentId);
+    const [unit] = await tx.select().from(trkUnits).where(eq(trkUnits.id, a.unitId)).limit(1);
+    const [pt] = await tx.select().from(masterPt).where(eq(masterPt.id, induk.ptId)).limit(1);
+    if (!pt || pt.deletedAt || pt.proyekId !== unit?.projectId) throw new AppError('Kavling baru tidak berada di proyek PT dokumen.', 422);
     const pindah = a.unitId !== induk.unitId;
     if (pindah && pj.tanggalBast) throw new AppError('Penjualan sudah BAST; pindah kavling tidak bisa lewat adendum.', 409);
     if (!pindah && toCents(biayaPindah) > 0n) throw new AppError('Biaya pindah hanya untuk adendum pindah kavling.', 422);
@@ -106,6 +111,8 @@ export async function finalisasiTx(tx, actor, d) {
   if (pj.status !== 'aktif') throw new AppError('Penjualan sudah dibatalkan.', 409);
   const { a, unit, customer } = await findAssignment(tx, d.assignmentId);
   if (a.unitId !== d.unitId) throw new AppError('Kavling di PR Track berubah lagi. Buat ulang adendum.', 409);
+  const [pt] = await tx.select().from(masterPt).where(eq(masterPt.id, d.ptId)).limit(1);
+  if (!pt || pt.deletedAt || pt.proyekId !== unit.projectId) throw new AppError('PT tidak terhubung ke proyek kavling ini.', 422);
 
   const nilaiBaru = nett(d.data);
   if (pj.tanggalBast && nilaiBaru !== toCents(pj.nilaiSppr)) {

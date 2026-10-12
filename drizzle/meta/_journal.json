@@ -57,6 +57,13 @@
       "when": 1791355588182,
       "tag": "0007_drop_kategori_hp_teks",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791630647380,
+      "tag": "0008_company_mapping_sessions",
+      "breakpoints": true
     }
   ]
 }

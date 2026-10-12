@@ -14,17 +14,21 @@ route dan validator backend. Semua contoh memakai data ilustrasi, bukan data pro
 
 1. `POST /api/v1/auth/login` dengan JSON `{ "email": "keuangan@example.test", "password": "password-anda" }`.
 2. Server mengirim cookie **si_access_token** (15 menit) dan **si_refresh_token**
-   (7 hari). Cookie HttpOnly; Secure di produksi; SameSite=Strict. Refresh cookie
+   (maksimal 7 hari sejak login). Cookie HttpOnly; Secure di produksi; SameSite=Strict. Refresh cookie
    hanya berlaku pada path `/api/v1/auth`.
-3. Browser menggunakan `credentials: 'include'` pada setiap request. Cookie tidak
-   dibaca JavaScript. Token tidak dikembalikan di body login dan tidak perlu
-   disimpan di localStorage atau ditempel ke dokumentasi.
+3. Klien cookie sesitus menggunakan `credentials: 'include'` dengan origin yang
+   diizinkan. Login juga mengembalikan token di body untuk klien Bearer lintas situs.
+   Jangan menaruh token di dokumentasi atau log.
 4. Saat API mengembalikan `401`, panggil `POST /api/v1/auth/refresh`, lalu ulangi
    request sekali. Refresh merotasi token; hindari beberapa refresh paralel.
 5. Jika refresh gagal, login kembali. Logout lewat `POST /api/v1/auth/logout`.
 
-Autentikasi JWT backend juga dapat membaca header Authorization, tetapi alur login
-aplikasi hanya menerbitkan cookie. Dokumentasi ini menggunakan alur cookie tersebut.
+Setiap access JWT terikat ke sesi server. Logout mencabut sesi tersebut; perubahan
+password membatalkan kredensial sesi; user nonaktif ditolak. Role dibaca ulang
+dari database setiap request. Refresh merotasi token sekali pakai dengan satu
+pemenang untuk request bersamaan. Respons gagal tidak menghapus cookie pemenang.
+Sesi memiliki batas absolut 7 hari sejak login; `refreshExpiresIn` menyatakan
+sisa umur sesi dan `expiresIn` adalah 900 detik untuk access token.
 
 Contoh cURL (gunakan akun milik Anda; cookie jar adalah rahasia):
 
@@ -33,8 +37,8 @@ curl -c cookies.txt -H 'Content-Type: application/json' \
   --data '{"email":"keuangan@example.test","password":"password-anda"}' \
   https://podorukunsi.my.id/api/v1/auth/login
 curl -b cookies.txt https://podorukunsi.my.id/api/v1/auth/me
-curl -b cookies.txt -c cookies.txt -X POST https://podorukunsi.my.id/api/v1/auth/refresh
-curl -b cookies.txt -c cookies.txt -X POST https://podorukunsi.my.id/api/v1/auth/logout
+curl -b cookies.txt -c cookies.txt -H 'Origin: https://podorukunsi.my.id' -X POST https://podorukunsi.my.id/api/v1/auth/refresh
+curl -b cookies.txt -c cookies.txt -H 'Origin: https://podorukunsi.my.id' -X POST https://podorukunsi.my.id/api/v1/auth/logout
 ```
 
 ## Hak akses
@@ -50,12 +54,22 @@ curl -b cookies.txt -c cookies.txt -X POST https://podorukunsi.my.id/api/v1/auth
 **Admin tidak otomatis memiliki akses modul keuangan.** Akun pengujian ber-role
 admin akan menerima `403` pada endpoint yang hanya mengizinkan keuangan.
 Daftar role aplikasi: admin, keuangan, teknisi, marketing, kontraktor.
+Keputusan pemilik 10 Oktober 2026: user `keuangan` mengakses seluruh proyek/PT;
+tidak ada pembatasan berdasarkan penugasan. Relasi PT/proyek/kavling tetap divalidasi.
 
 ## CORS dan autentikasi lintas origin
 
-Selama masa uji, `CORS_ALLOW_ALL=true` di produksi: origin mana pun (termasuk
-`http://localhost:*`) diizinkan. Setelah domain frontend pasti, isi
-`FRONTEND_URL` dan kembalikan `CORS_ALLOW_ALL=false`.
+Deployment FE belum tetap (localhost dan Vercel development). Dalam kode baru,
+`CORS_ALLOW_ALL=true` hanya membuka mode Bearer tanpa header Allow-Credentials.
+Klien harus memakai `credentials: 'omit'`. Ini belum menjadi bukti konfigurasi
+VPS sudah diperbarui. Setelah origin frontend dikonfirmasi, isi `FRONTEND_URL`
+dengan origin persis (koma untuk beberapa origin), lalu `CORS_ALLOW_ALL=false`.
+Jangan memakai wildcard Vercel atau menebak domain.
+
+Request yang memakai cookie dan mengubah data wajib mengirim Origin atau Referer
+yang cocok dengan allowlist/API origin; request tanpa keduanya ditolak 403.
+Pengecekan ini tetap aktif dalam mode CORS terbuka. Bearer untuk endpoint bisnis
+atau refreshToken di body endpoint auth menggunakan kredensial eksplisit.
 
 Cookie sesi memakai `SameSite=Strict`, sehingga browser tidak mengirimnya dari
 situs lain. Frontend lintas situs memakai token Bearer:
@@ -144,3 +158,12 @@ Jangan membuat transaksi contoh di produksi hanya untuk menguji dokumentasi.
 langsung. Proyek/kavling dikelola di Track. Sinkronisasi produksi saat ini nonaktif;
 data cermin dapat kosong. Aksi sinkron tidak boleh dianggap berhasil menarik data
 jika integrasi belum dikonfigurasi.
+
+**Master PT:** ambil `GET /master-pt/companies`. `trackCompanyId` adalah `id`
+lokal cermin company, bukan `trackId` sumber PRTrack. Kirim field tersebut pada
+POST/PATCH Master PT untuk pemetaan eksplisit. Satu company hanya dapat dipetakan
+ke satu PT (termasuk PT soft-delete). Perumahan, jika diisi, harus berasal dari
+company yang sama. Sinkronisasi Track tidak menimpa nama/legal/direktur/alamat/KTP
+Master PT milik SI; tidak ada pencocokan nama otomatis.
+
+Kontrak handoff dan catatan untuk teman FE: [FE_HANDOFF.md](FE_HANDOFF.md).

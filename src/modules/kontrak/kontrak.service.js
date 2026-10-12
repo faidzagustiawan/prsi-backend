@@ -64,7 +64,7 @@ const toPembayaranDto = (p, info) => ({
 });
 
 function toKontrakDto({ k, kavling, namaKontraktor }, adendums, pembayarans, info) {
-  const { nilai, dibayar } = hitung(k, adendums, pembayarans, info);
+  const { nilai, dibayar, dibayarTermasukDraft } = hitung(k, adendums, pembayarans, info);
   return {
     id: k.id,
     noSpk: k.noSpk,
@@ -80,6 +80,7 @@ function toKontrakDto({ k, kavling, namaKontraktor }, adendums, pembayarans, inf
     nilaiKontrak: toNumber(k.nilaiKontrak),
     nilaiTerkini: num(nilai),
     totalDibayar: num(dibayar),
+    sisaDapatDibayar: k.status === 'batal' ? 0 : num(nilai - dibayarTermasukDraft),
     sisaHutang: k.status === 'batal' ? 0 : num(nilai - dibayar),
     keterangan: k.keterangan ?? undefined,
     akunPersediaanId: k.akunPersediaanId,

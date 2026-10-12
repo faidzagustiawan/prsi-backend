@@ -14,6 +14,7 @@ export const REFRESH_TTL_SEC = 7 * 24 * 60 * 60; // 7 hari, lebih pendek dari Tr
 const DUMMY_HASH = bcrypt.hashSync(crypto.randomBytes(16).toString('hex'), 10);
 
 const hashToken =(raw) => crypto.createHash('sha256').update(raw).digest('hex');
+export const credentialHashOf = (user) => hashToken(user.passwordHash);
 
 // Bentuk mengikuti AuthUser di frontend (FE_Podorukun-SI/src/store/authStore.ts)
 export const toPublicUser = (user) => ({
@@ -24,17 +25,17 @@ export const toPublicUser = (user) => ({
 });
 
 /** Membuat access token + refresh token baru untuk user. */
-const issueTokens = async (user, fastify) => {
+const issueTokens = async (user, fastify, session, rawToken) => {
+  const refreshToken = rawToken ?? crypto.randomBytes(40).toString('hex');
+  session ??= await repo.saveRefreshToken(user.id, hashToken(refreshToken), new Date(Date.now() + REFRESH_TTL_SEC * 1000), credentialHashOf(user));
   const accessToken = fastify.jwt.sign({
     sub: user.id,
+    sid: session.id,
     role: user.role,
     email: user.email,
   });
 
-  const refreshToken = crypto.randomBytes(40).toString('hex');
-  await repo.saveRefreshToken(user.id, hashToken(refreshToken), new Date(Date.now() + REFRESH_TTL_SEC * 1000));
-
-  return { accessToken, refreshToken, user: toPublicUser(user) };
+  return { accessToken, refreshToken, refreshExpiresIn: Math.max(0, Math.floor((session.expiresAt.getTime() - Date.now()) / 1000)), user: toPublicUser(user) };
 };
 
 const assertAccountActive = (user) => {
@@ -74,20 +75,38 @@ export const loginUser = async (email, password, fastify) => {
 export const refreshSession = async (rawRefreshToken, fastify) => {
   if (!rawRefreshToken) throw new AppError('Sesi tidak ditemukan. Silakan login kembali.', 401);
 
-  const stored = await repo.consumeRefreshToken(hashToken(rawRefreshToken));
+  const replacement = crypto.randomBytes(40).toString('hex');
+  const stored = await repo.rotateRefreshToken(hashToken(rawRefreshToken), hashToken(replacement));
   if (!stored || stored.expiresAt.getTime() < Date.now()) {
     throw new AppError('Sesi Anda telah berakhir. Silakan login kembali.', 401);
   }
 
   const user = await repo.findUserById(stored.userId);
-  if (!user) throw new AppError('Sesi tidak valid. Silakan login kembali.', 401);
+  if (!user || user.status !== 'active' || stored.credentialHash !== credentialHashOf(user)) {
+    await repo.revokeSession(stored.id);
+    throw new AppError('Sesi tidak valid. Silakan login kembali.', 401);
+  }
   assertAccountActive(user);
 
-  return issueTokens(user, fastify);
+  return issueTokens(user, fastify, stored, replacement);
+};
+
+export const validateSession = async (claims) => {
+  if (!claims.sid) throw new AppError('Silakan login kembali.', 401);
+  const [session, user] = await Promise.all([repo.findSession(claims.sid), repo.findUserById(claims.sub)]);
+  if (!session || !user || session.userId !== user.id || user.status !== 'active' || session.credentialHash !== credentialHashOf(user)) {
+    if (session) await repo.revokeSession(session.id);
+    throw new AppError('Sesi tidak valid. Silakan login kembali.', 401);
+  }
+  return user;
 };
 
 export const logoutUser = async (rawRefreshToken) => {
   if (rawRefreshToken) await repo.revokeRefreshToken(hashToken(rawRefreshToken));
+};
+
+export const logoutSession = async (claims) => {
+  if (claims.sid) await repo.revokeSession(claims.sid);
 };
 
 export const getCurrentUser = async (userId) => {

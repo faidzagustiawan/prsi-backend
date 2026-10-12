@@ -99,10 +99,15 @@ export async function findPtByProyek(proyekId, tx = db) {
 }
 
 export async function isPeriodeTerkunci(ptId, tanggal, tx = db) {
+  await lockPeriode(tx, ptId, tanggal.slice(0, 7));
   const [y, m] = tanggal.split('-').map(Number);
   const [row] = await tx.select({ status: periode.status }).from(periode)
     .where(and(eq(periode.ptId, ptId), eq(periode.tahun, y), eq(periode.bulan, m))).limit(1);
   return row?.status === 'terkunci';
+}
+
+export async function lockPeriode(tx, ptId, bulan) {
+  await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${`periode:${ptId}:${bulan}`}, 0))`);
 }
 
 export async function findSaldoAwalPeriode(proyekId, tx = db) {

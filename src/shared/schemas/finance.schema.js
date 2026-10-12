@@ -40,6 +40,7 @@ export const refreshTokens = finance.table('refresh_tokens', {
     .references(() => users.id, { onDelete: 'cascade' })
     .notNull(),
   tokenHash: text('token_hash').notNull().unique(),
+  credentialHash: text('credential_hash'),
   expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [

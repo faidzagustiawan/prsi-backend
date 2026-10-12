@@ -27,6 +27,7 @@ const tokenResponse = {
           refreshToken: { type: 'string', description: 'Token sekali pakai untuk POST /auth/refresh; berlaku 7 hari, dirotasi setiap refresh.' },
           tokenType: { type: 'string', enum: ['Bearer'] },
           expiresIn: { type: 'integer', description: 'Umur accessToken dalam detik.' },
+          refreshExpiresIn: { type: 'integer', description: 'Sisa umur sesi dalam detik; batas absolut 7 hari sejak login, tidak diperpanjang oleh refresh.' },
         },
       },
     },

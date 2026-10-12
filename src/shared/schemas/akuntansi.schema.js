@@ -30,7 +30,7 @@ const timestamps = () => ({
 // proyekId = perumahan tempat PT ini terikat (satu PT, satu perumahan).
 export const masterPt = finance.table('master_pt', {
   id: uuid('id').defaultRandom().primaryKey(),
-  trackCompanyId: uuid('track_company_id').references(() => trkCompanies.id),
+  trackCompanyId: uuid('track_company_id').references(() => trkCompanies.id).unique(),
   proyekId: uuid('proyek_id').references(() => trkProjects.id).unique(),
   namaPt: varchar('nama_pt', { length: 150 }).notNull(),
   singkatan: varchar('singkatan', { length: 20 }),
