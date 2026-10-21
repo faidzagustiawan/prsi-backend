@@ -230,7 +230,8 @@ Keuangan dan gladi cutover.
   jalur legacy: dijurnal otomatis pada tanggal aslinya bila rekening cocok,
   atau `gagal_validasi`/draft bila rekening/bukti/periode tidak memenuhi. Tidak
   ada batas tanggal; saldo awal yang sudah diinput manual dapat terhitung ganda.
-  Opsi penanganannya ada di [opsi-cutoff-pembayaran-lama.md](opsi-cutoff-pembayaran-lama.md).
+  Opsi penanganannya ada di [opsi-cutoff-pembayaran-lama.md](opsi-cutoff-pembayaran-lama.md);
+  Opsi A (status `historis`, `SI_LEGACY_CUTOVER_AT`) sudah diimplementasikan.
 - Pembayaran lama yang dialokasikan tanpa jadwal (mis. booking fee) tidak
   dihitung dalam plafon tagihan SI; Keuangan perlu memperhitungkannya agar
   tidak menagih ulang.

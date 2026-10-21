@@ -12,16 +12,18 @@
 //   jurnal tidak dapat dibuat (sebelum
 //     saldo awal, periode terkunci)     -> gagal_validasi tanpa jurnal; batch tetap lanjut
 //   lolos                              -> jurnal diposting, dialokasikan ke jadwal, dijurnal
+//   tanpa tagihan, tanggal sebelum saldo
+//     awal proyek, dicatat sebelum cutover -> historis: dialokasikan, tidak dijurnal (Opsi A)
 //   sudah dijurnal lalu berubah/dihapus
 //     di Track                          -> perlu_ditinjau; jurnal TIDAK diubah otomatis
 //
 // Akun kredit: booking fee -> Titipan booking fee; sebelum BAST -> Uang muka
 // penjualan; sejak tanggal BAST -> Piutang penjualan.
-import { and, asc, eq, inArray, isNull, ne, or, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import { createHash } from 'node:crypto';
 import { db } from '../../config/database.js';
-import { trkPayments, trkAssignments, statusPembayaranSi } from '../../shared/schemas/track.schema.js';
-import { akun, lampiran, jurnal } from '../../shared/schemas/akuntansi.schema.js';
+import { trkPayments, trkAssignments, trkUnits, statusPembayaranSi } from '../../shared/schemas/track.schema.js';
+import { akun, lampiran, jurnal, saldoAwalPeriode } from '../../shared/schemas/akuntansi.schema.js';
 import { penjualanKeuangan, jadwalAngsuran, alokasiPembayaran, outboxTrack } from '../../shared/schemas/penjualan.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { toCents, centsToString, toNumber } from '../../shared/utils/money.js';
@@ -50,6 +52,59 @@ async function validateSelectedBill(tx,p) {
   if (toCents(bill.jumlah)-toCents(used) !== toCents(p.nominal) || toCents(p.nominal)<=0n) throw new AppError('Nominal pembayaran tidak sama dengan sisa tagihan atau tagihan sudah lunas.',409);
   if (bill.jenis!==p.jenis) throw new AppError('Jenis pembayaran tidak sesuai tagihan.',409);
   return bill;
+}
+
+// Pembayaran tanpa tagihan ditahan selama billing aktif tetapi waktu cutover belum ditetapkan.
+const legacyHeld = () => env.billingEnabled && !env.legacyCutoverAt;
+const ditahan = (message) => Object.assign(new AppError(message, 409), { hold: true });
+export const PENANDA_SALDO_AWAL = 'SALDO-AWAL';
+
+/**
+ * Opsi A: pembayaran tanpa tagihan yang bertanggal sebelum tanggal mulai saldo awal
+ * proyek sudah terwakili saldo awal customer. Dialokasikan ke tagihan supaya sisa
+ * tagihan benar, tetapi tidak dijurnal. Mengembalikan null bila pembayaran diproses
+ * jalur legacy biasa.
+ */
+async function klasifikasiPembayaranLama(tx, actor, p) {
+  if (legacyHeld()) throw ditahan('Pembayaran tanpa tagihan ditahan: SI_LEGACY_CUTOVER_AT belum ditetapkan.');
+  if (!env.legacyCutoverAt) return null;
+  const [asg] = await tx.select().from(trkAssignments).where(eq(trkAssignments.id, p.assignmentId)).limit(1);
+  if (!asg || asg.isDeleted) return null;
+  const { unit } = await findAssignment(tx, p.assignmentId);
+  const saldoAwal = await jurnalRepo.findSaldoAwalPeriode(unit.projectId, tx);
+  if (saldoAwal?.status !== 'terkunci') throw ditahan('Pembayaran tanpa tagihan ditahan: saldo awal proyek belum dikunci.');
+  if (p.tanggal >= saldoAwal.tanggalMulai) return null;
+  if (p.sourceCreatedAt && p.sourceCreatedAt >= env.legacyCutoverAt) {
+    return setStatus(tx, p.id, 'perlu_ditinjau', {
+      alasan: `Dicatat di PR Track sesudah cutover dengan tanggal ${p.tanggal}, sebelum saldo awal proyek (${saldoAwal.tanggalMulai}). Pastikan belum termasuk saldo awal.`,
+    });
+  }
+  if (!(toCents(p.nominal) > 0n) || !JENIS_PEMBAYARAN.includes(p.jenis)) {
+    return setStatus(tx, p.id, 'perlu_ditinjau', {
+      alasan: 'Pembayaran lama dengan nominal atau jenis tidak lazim (mis. pengembalian dana); tangani manual terhadap saldo awal.',
+    });
+  }
+  await alokasikan(tx, actor, p);
+  const tagihan = await tx.selectDistinct({ id: alokasiPembayaran.jadwalId }).from(alokasiPembayaran)
+    .where(and(eq(alokasiPembayaran.paymentId, p.id), isNotNull(alokasiPembayaran.jadwalId)));
+  for (const { id } of tagihan) await enqueueBill(tx, id);
+  const hasil = await setStatus(tx, p.id, 'historis', { alasan: `Termasuk saldo awal proyek (mulai ${saldoAwal.tanggalMulai}); tidak dijurnal.` });
+  // Sidik isi saat dicatat, untuk mendeteksi perubahan di Track sesudahnya.
+  await tx.update(statusPembayaranSi).set({ verificationHash: verificationHash(p) }).where(eq(statusPembayaranSi.paymentId, p.id));
+  await tx.insert(outboxTrack).values({
+    jenis: 'kunci_pembayaran', refId: p.id, payload: { trackPaymentId: p.trackId, jurnal: PENANDA_SALDO_AWAL, terkunci: true },
+  });
+  return hasil;
+}
+
+/** Alokasikan ulang pembayaran historis satu assignment, mis. setelah SPPR difinalkan. */
+export async function alokasiHistoris(tx, actor, assignmentId) {
+  const rows = await tx.select({ p: trkPayments }).from(trkPayments)
+    .innerJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
+    .where(and(eq(trkPayments.assignmentId, assignmentId), eq(statusPembayaranSi.statusProses, 'historis')))
+    .orderBy(asc(trkPayments.tanggal), asc(trkPayments.syncedAt));
+  for (const { p } of rows) await alokasikan(tx, actor, p);
+  return rows.length;
 }
 
 export async function verifikasi(actor,id,{keputusan,alasan=null}) {
@@ -163,6 +218,14 @@ export async function prosesPembayaranTx(tx, actor, paymentId) {
   const [status] = await tx.select().from(statusPembayaranSi).where(eq(statusPembayaranSi.paymentId, p.id)).limit(1);
   if (p.siJadwalId && !env.billingEnabled) return setStatus(tx,p.id,'menunggu',{alasan:'Fitur tagihan SI belum diaktifkan.'});
 
+  if (status?.statusProses === 'historis') {
+    if (status.verificationHash === verificationHash(p)) {
+      await tx.update(statusPembayaranSi).set({ updatedAt: new Date() }).where(eq(statusPembayaranSi.paymentId, p.id));
+      return status;
+    }
+    return setStatus(tx, p.id, 'perlu_ditinjau', { alasan: 'Pembayaran historis berubah di PR Track setelah dicatat sebagai saldo awal.' });
+  }
+
   if (status && ['dijurnal', 'perlu_ditinjau'].includes(status.statusProses)) {
     const j = status.jurnalId ? await jurnalRepo.findJurnal(status.jurnalId, tx) : null;
     if (!(status.statusProses === 'perlu_ditinjau' && j?.status === 'dikoreksi')) {
@@ -195,6 +258,10 @@ export async function prosesPembayaranTx(tx, actor, paymentId) {
     }
     await validateSelectedBill(tx,p);
   } else if (p.statusVerifikasi !== 'terverifikasi') return setStatus(tx, p.id, 'menunggu', { alasan: 'Belum diverifikasi admin PR Track.' });
+  else {
+    const lama = await klasifikasiPembayaranLama(tx, actor, p);
+    if (lama) return lama;
+  }
 
   const berat = [];
   const [asg] = await tx.select().from(trkAssignments).where(eq(trkAssignments.id, p.assignmentId)).limit(1);
@@ -343,7 +410,7 @@ async function tandaiGagal(paymentId, err) {
  */
 export async function proses(actor, paymentId) {
   return db.transaction((tx) => prosesPembayaranTx(tx, actor, paymentId)).catch((err) => {
-    if (!(err instanceof AppError) || err.statusCode === 404) throw err;
+    if (!(err instanceof AppError) || err.statusCode === 404 || err.hold) throw err;
     return tandaiGagal(paymentId, err);
   });
 }
@@ -355,16 +422,31 @@ export async function proses(actor, paymentId) {
  * diproses ulang setiap putaran.
  */
 export async function prosesSemua(actor) {
+  // Pembayaran tanpa tagihan hanya dipilih bila cutover siap (Opsi A); sisanya tetap
+  // belum_diproses dan otomatis dipilih begitu konfigurasi/saldo awal lengkap.
+  const legacyBoleh = legacyHeld() ? sql`false`
+    : env.legacyCutoverAt ? eq(saldoAwalPeriode.status, 'terkunci') : sql`true`;
   const rows = await db.select({ id: trkPayments.id }).from(trkPayments)
     .leftJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
-    .where(or(
+    .leftJoin(trkAssignments, eq(trkAssignments.id, trkPayments.assignmentId))
+    .leftJoin(trkUnits, eq(trkUnits.id, trkAssignments.unitId))
+    .leftJoin(saldoAwalPeriode, eq(saldoAwalPeriode.proyekId, trkUnits.projectId))
+    .where(and(or(
       isNull(statusPembayaranSi.paymentId),
-      and(inArray(statusPembayaranSi.statusProses, ['menunggu', 'dijurnal']), sql`${trkPayments.syncedAt} > ${statusPembayaranSi.updatedAt}`),
-    ))
+      and(inArray(statusPembayaranSi.statusProses, ['menunggu', 'dijurnal', 'historis']), sql`${trkPayments.syncedAt} > ${statusPembayaranSi.updatedAt}`),
+    ), or(isNotNull(trkPayments.siJadwalId), legacyBoleh)))
     .orderBy(asc(trkPayments.tanggal));
-  const hasil = { diproses: 0, dijurnal: 0, menunggu: 0, gagal_validasi: 0, perlu_ditinjau: 0, ditolak: 0 };
+  const hasil = { diproses: 0, dijurnal: 0, historis: 0, menunggu: 0, gagal_validasi: 0, perlu_ditinjau: 0, ditolak: 0, ditahan: 0 };
   for (const { id } of rows) {
-    const s = await proses(actor, id);
+    let s;
+    try {
+      s = await proses(actor, id);
+    } catch (err) {
+      // Kondisi tahan berubah di tengah putaran: lewati, coba lagi putaran berikutnya.
+      if (!err.hold) throw err;
+      hasil.ditahan += 1;
+      continue;
+    }
     hasil.diproses += 1;
     hasil[s.statusProses] += 1;
   }
@@ -425,7 +507,7 @@ async function tagihanPembayaran(payments) {
 export async function realokasiPenjualan(tx, actor, penjualanId, assignmentId) {
   const rows = await tx.select({ p: trkPayments }).from(trkPayments)
     .innerJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
-    .where(and(eq(trkPayments.assignmentId, assignmentId), eq(statusPembayaranSi.statusProses, 'dijurnal')))
+    .where(and(eq(trkPayments.assignmentId, assignmentId), inArray(statusPembayaranSi.statusProses, ['dijurnal', 'historis'])))
     .orderBy(asc(trkPayments.tanggal), asc(trkPayments.syncedAt));
   const legacy=rows.filter(({p})=>!p.siJadwalId);
   for (const { p } of legacy) {

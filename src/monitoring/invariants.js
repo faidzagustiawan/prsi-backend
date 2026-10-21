@@ -29,6 +29,8 @@ export const INVARIANTS = {
   duplicate_payment_journal: `SELECT count(*) FROM (
     SELECT ref_id FROM finance.jurnal WHERE ref_type='trk_payments' AND status='diposting'
     AND dibalik_oleh_id IS NULL GROUP BY ref_id HAVING count(*)>1) q`,
+  historical_payment_with_journal: `SELECT count(*) FROM finance.status_pembayaran_si
+    WHERE status_proses='historis' AND jurnal_id IS NOT NULL`,
   review_older_than_seven_days: `SELECT count(*) FROM finance.status_pembayaran_si
     WHERE status_proses='perlu_ditinjau' AND updated_at<now()-interval '7 days'`,
 };

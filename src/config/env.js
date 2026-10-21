@@ -6,6 +6,16 @@ dotenv.config();
 
 const required = ['DATABASE_URL', 'JWT_SECRET', 'COOKIE_SECRET'];
 
+// Waktu cutover wajib memuat zona waktu supaya tidak ditafsirkan berbeda antar host.
+function parseCutover(value) {
+  if (!value) return null;
+  const at = new Date(value);
+  if (!/(Z|[+-]\d{2}:\d{2})$/.test(value) || Number.isNaN(at.getTime())) {
+    throw new Error('SI_LEGACY_CUTOVER_AT harus ISO 8601 dengan zona waktu, mis. 2026-11-01T00:00:00+07:00');
+  }
+  return at;
+}
+
 for (const key of required) {
   if (!process.env[key]) {
     throw new Error(`${key} is missing in environment`);
@@ -46,6 +56,9 @@ export const env = {
   // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),
   billingEnabled: process.env.SI_BILLING_ENABLED === 'true',
+  // Opsi A cutoff pembayaran lama (docs/deploy/opsi-cutoff-pembayaran-lama.md).
+  // null = belum dikonfigurasi; saat billing aktif pembayaran tanpa tagihan ditahan.
+  legacyCutoverAt: parseCutover(process.env.SI_LEGACY_CUTOVER_AT),
   // Sinkronisasi PR Track (docs/RancanganSistem.md bagian 5-7)
   sync: {
     // Saklar utama: false = worker tidak menghubungi Track sama sekali

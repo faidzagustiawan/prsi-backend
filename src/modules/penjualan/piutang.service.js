@@ -61,7 +61,7 @@ async function loadDetail(rows) {
     db.select({ al: alokasiPembayaran, tanggal: trkPayments.tanggal, trackId: trkPayments.trackId }).from(alokasiPembayaran)
       .innerJoin(trkPayments, eq(trkPayments.id, alokasiPembayaran.paymentId))
       .innerJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
-      .where(and(inArray(alokasiPembayaran.penjualanId, pjIds), eq(statusPembayaranSi.statusProses, 'dijurnal'))),
+      .where(and(inArray(alokasiPembayaran.penjualanId, pjIds), inArray(statusPembayaranSi.statusProses, ['dijurnal', 'historis']))),
     db.select({ p: trkPayments, s: statusPembayaranSi }).from(trkPayments)
       .leftJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
       .where(and(inArray(trkPayments.assignmentId, asgIds), eq(trkPayments.isDeleted, false))).orderBy(asc(trkPayments.tanggal)),
@@ -89,7 +89,8 @@ function toTagihanDto(r, d) {
     return { ...row, status: statusPeriode(row) };
   });
 
-  const dijurnal = payments.filter((x) => x.s?.statusProses === 'dijurnal');
+  // Pembayaran historis (Opsi A cutoff) sudah terwakili saldo awal; tetap dihitung dibayar.
+  const dijurnal = payments.filter((x) => ['dijurnal', 'historis'].includes(x.s?.statusProses));
   const totalDibayar = dijurnal.reduce((s, x) => s + toCents(x.p.nominal), 0n);
   const keJadwal = new Set(alokasi.filter((x) => x.al.jadwalId).map((x) => x.al.paymentId));
   const nilai = toCents(pj.nilaiSppr);

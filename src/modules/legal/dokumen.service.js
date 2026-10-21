@@ -23,6 +23,7 @@ import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { findAssignment, kodePembantuPembeli, saldoAkunKp, hitungJadwal } from '../penjualan/penjualan.helpers.js';
 import * as adendum from './adendum.service.js';
 import { enqueueBill } from '../../sync/billing-outbox.js';
+import { alokasiHistoris } from '../penjualan/pembayaran.service.js';
 
 const STATUS_FIELD = 'status';
 
@@ -386,13 +387,13 @@ export async function finalisasi(actor, id) {
       : await tx.insert(penjualanKeuangan).values(values).returning();
 
     const baris = d.jadwal?.baris ?? [];
-    if (baris.length) {
-      const inserted = await tx.insert(jadwalAngsuran).values(baris.map((r, i) => ({
-        penjualanId: pj.id, assignmentId: a.id, dokumenId: d.id, noUrut: i + 1, tanggal: r.tanggal,
-        jumlah: centsToString(toCents(r.jumlah)), keterangan: r.keterangan || `DP ${i + 1}`,
-      }))).returning();
-      for (const j of inserted) await enqueueBill(tx,j.id);
-    }
+    const inserted = baris.length ? await tx.insert(jadwalAngsuran).values(baris.map((r, i) => ({
+      penjualanId: pj.id, assignmentId: a.id, dokumenId: d.id, noUrut: i + 1, tanggal: r.tanggal,
+      jumlah: centsToString(toCents(r.jumlah)), keterangan: r.keterangan || `DP ${i + 1}`,
+    }))).returning() : [];
+    // Pembayaran historis (saldo awal) yang masuk sebelum SPPR mengisi tagihan baru lebih dulu.
+    await alokasiHistoris(tx, actor, a.id);
+    for (const j of inserted) await enqueueBill(tx,j.id);
 
     // Booking fee yang sudah masuk pindah dari titipan ke uang muka penjualan
     const kp = await kodePembantuPembeli(tx, customer, unit.projectId);

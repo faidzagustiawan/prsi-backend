@@ -1,8 +1,8 @@
 # Opsi cutoff untuk pembayaran PRTrack sebelum PRSI
 
-Status: usulan untuk diputuskan pemilik bersama Keuangan. Disusun 21 Oktober
-2026 dari pemeriksaan kode. Opsi belum diimplementasikan; hanya perbaikan bug
-penghenti worker yang sudah diterapkan.
+Status: Opsi A diimplementasikan 21 Oktober 2026 atas instruksi pemilik (lihat
+bagian "Implementasi Opsi A"). Keputusan Keuangan di bagian akhir tetap
+diperlukan sebelum aktivasi.
 
 ## Masalah
 
@@ -69,6 +69,29 @@ Perubahan:
 Kelebihan: memakai konsep yang sudah ada dan selaras dengan aturan jurnal SI;
 tanggal bisa berbeda per proyek. Kekurangan: bergantung pada saldo awal per
 customer yang lengkap; proyek tanpa saldo awal tidak bisa diaktifkan.
+
+#### Implementasi Opsi A
+
+- Konfigurasi `SI_LEGACY_CUTOVER_AT` (ISO 8601 dengan zona waktu; startup gagal
+  bila format salah). Kosong = belum dikonfigurasi.
+- Bila `SI_BILLING_ENABLED=true` dan nilai itu kosong, pembayaran tanpa tagihan
+  tidak dipilih worker (tetap `belum_diproses`); proses manual mengembalikan 409.
+- Bila nilai terisi, pembayaran tanpa tagihan hanya diproses untuk proyek dengan
+  saldo awal **terkunci**; proyek lain ditahan dengan cara yang sama.
+- Terverifikasi di Track, `tanggal < tanggal_mulai`, dicatat sebelum cutover,
+  nominal positif dan jenis dikenal → `historis`: alokasi FIFO seperti jalur
+  legacy, tanpa jurnal, kunci dikirim ke Track dengan penanda `SALDO-AWAL`, dan
+  tagihan terdampak dikirim ulang agar realisasi Track ikut.
+- Dicatat sesudah cutover dengan tanggal sebelum saldo awal, atau nominal ≤ 0 /
+  jenis tidak dikenal → `perlu_ditinjau` tanpa jurnal.
+- Pembayaran historis yang berubah di Track sesudahnya → `perlu_ditinjau`.
+- Piutang menghitung `historis` sebagai dibayar. SPPR yang difinalkan sesudahnya
+  mengalokasikan pembayaran historis assignment itu ke tagihan baru lebih dulu.
+- Invariant baru `historical_payment_with_journal` harus 0.
+- Tes: `integration.backend.js`, "option A cutoff ...". Alokasi historis saat
+  finalisasi SPPR dengan pembayaran historis yang sudah ada belum diuji khusus.
+- Belum ada laporan rekonsiliasi historis vs saldo awal kode pembantu; kueri
+  `status_proses='historis'` per penjualan dapat dipakai sementara.
 
 ### B. Cutoff global berdasarkan waktu pencatatan
 

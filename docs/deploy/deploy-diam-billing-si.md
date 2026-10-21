@@ -84,7 +84,11 @@ folder.
    SYNC_ENABLED=false
    SYNC_WRITE_ENABLED=false
    SI_BILLING_ENABLED=false
+   SI_LEGACY_CUTOVER_AT=
    ```
+
+   `SI_LEGACY_CUTOVER_AT` dibiarkan kosong pada deploy diam; nilainya ditetapkan
+   saat cutover setelah saldo awal tiap proyek dikunci.
 
    Jangan mengubah `SYNC_PROTOCOL`, token Track, atau `ALLOW_UNSAFE_DB_ROLE`.
 5. [ ] Uji `app.new` di port 3199 hanya untuk `/health` (schema belum

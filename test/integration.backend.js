@@ -231,6 +231,61 @@ test('backend integration with real PostgreSQL', async (t) => {
       assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0);
       assert.equal((await call('POST', `/pembayaran-track/${closedPeriod}/proses`)).statusProses, 'gagal_validasi');
     });
+    await t.test('option A cutoff: old payments become historis, backdated input is reviewed, legacy is held without cutover', async () => {
+      const { env } = await import('../src/config/env.js');
+      const [{ id: assignment }] = await sql`SELECT id FROM finance.trk_assignments WHERE unit_id = ${units[0]} LIMIT 1`;
+      const payment = async (tanggal, createdAt, nominal = 50) => {
+        const id = randomUUID();
+        await sql`INSERT INTO finance.trk_payments (id, track_id, assignment_id, tanggal, nominal, jenis, status_verifikasi, rekening_tujuan, source_created_at)
+          VALUES (${id}, ${randomUUID()}, ${assignment}, ${tanggal}, ${nominal}, 'uang_muka', 'terverifikasi', NULL, ${createdAt})`;
+        return id;
+      };
+      const status = async (id) => (await sql`SELECT status_proses, alasan, jurnal_id FROM finance.status_pembayaran_si WHERE payment_id = ${id}`)[0];
+      const saved = { billing: env.billingEnabled, cutover: env.legacyCutoverAt };
+      try {
+        // Billing aktif tanpa waktu cutover: pembayaran tanpa tagihan tidak disentuh.
+        env.billingEnabled = true; env.legacyCutoverAt = null;
+        const held = await payment('2025-10-01', '2025-10-01T03:00:00Z');
+        const heldRun = await call('POST', '/pembayaran-track/proses');
+        assert.equal(await status(held), undefined, 'legacy payment stays unprocessed while cutover is not configured');
+        assert.equal(heldRun.historis, 0);
+        await call('POST', `/pembayaran-track/${held}/proses`, undefined, 409);
+        assert.equal(await status(held), undefined, 'manual processing is refused, not marked failed');
+
+        env.legacyCutoverAt = new Date('2026-10-21T00:00:00+07:00');
+        const backdated = await payment('2025-11-02', '2026-10-22T02:00:00Z');
+        const refund = await payment('2025-11-03', '2025-11-03T02:00:00Z', -20);
+        const run = await call('POST', '/pembayaran-track/proses');
+        assert.equal(run.historis, 1);
+
+        const historis = await status(held);
+        assert.equal(historis.status_proses, 'historis');
+        assert.equal(historis.jurnal_id, null);
+        assert.match(historis.alasan, /saldo awal/);
+        const [{ n: journals }] = await sql`SELECT count(*)::int n FROM finance.jurnal WHERE ref_type = 'trk_payments' AND ref_id = ${held}`;
+        assert.equal(journals, 0);
+        const [{ total }] = await sql`SELECT coalesce(sum(nominal), 0)::numeric AS total FROM finance.alokasi_pembayaran WHERE payment_id = ${held}`;
+        assert.equal(Number(total), 50, 'historical payment is allocated so bills show it as paid');
+        const [lock] = await sql`SELECT payload FROM finance.outbox_track WHERE jenis = 'kunci_pembayaran' AND ref_id = ${held}`;
+        assert.equal(lock.payload.jurnal, 'SALDO-AWAL');
+        const piutang = (await call('GET', '/piutang')).find((x) => x.assignmentId === assignment);
+        assert.equal(piutang.totalDibayar, 50, 'receivable counts historical payments as paid');
+
+        assert.equal((await status(backdated)).status_proses, 'perlu_ditinjau');
+        assert.match((await status(backdated)).alasan, /sesudah cutover/);
+        assert.equal((await status(refund)).status_proses, 'perlu_ditinjau');
+
+        // Unchanged rows are not reprocessed; a change in Track after the cutoff is flagged.
+        assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0);
+        await sql`UPDATE finance.trk_payments SET nominal = 60, synced_at = now() + interval '1 second' WHERE id = ${held}`;
+        await call('POST', '/pembayaran-track/proses');
+        assert.equal((await status(held)).status_proses, 'perlu_ditinjau');
+        const [{ n: invalid }] = await sql`SELECT count(*)::int n FROM finance.status_pembayaran_si WHERE status_proses = 'historis' AND jurnal_id IS NOT NULL`;
+        assert.equal(invalid, 0);
+      } finally {
+        env.billingEnabled = saved.billing; env.legacyCutoverAt = saved.cutover;
+      }
+    });
     await t.test('SHM status history, duplicate prevention and collateral validation', async () => {
       const input = { nomorShm: 'SHM-TEST', unitId: units[0], status: 'di_kantor', lokasi: 'Kantor' };
       const s = await call('POST', '/shm', input, 201);
