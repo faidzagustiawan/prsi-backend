@@ -6,7 +6,13 @@ import { env } from './env.js';
 // Koneksi utama API. Boleh lewat transaction pooler (PgBouncer mode
 // transaction): prepare dimatikan karena prepared statement tidak bertahan
 // antar transaksi di pooler. Role si_app juga dibatasi CONNECTION LIMIT.
+// Supavisor/PgBouncer mode transaksi: query yang dipipeline dalam satu koneksi bisa terpotong
+// saat beban serentak, lalu server menunggu klien (ClientRead) dan koneksi tergantung selamanya.
+// Satu query per koneksi pada satu waktu mencegahnya.
+const POOLER_SAFE = { max_pipeline: 1 };
+
 const client = postgres(env.databaseUrl, {
+  ...POOLER_SAFE,
   prepare: false,
   max: env.dbPoolMax,
   idle_timeout: 20,
@@ -19,6 +25,7 @@ const reportClient =
   env.reportDatabaseUrl === env.databaseUrl
     ? client
     : postgres(env.reportDatabaseUrl, {
+        ...POOLER_SAFE,
         prepare: false,
         max: 3,
         idle_timeout: 20,
@@ -32,6 +39,7 @@ const sessionClient =
   env.sessionDatabaseUrl === env.databaseUrl
     ? client
     : postgres(env.sessionDatabaseUrl, {
+        ...POOLER_SAFE,
         prepare: false,
         max: 2,
         idle_timeout: 60,
