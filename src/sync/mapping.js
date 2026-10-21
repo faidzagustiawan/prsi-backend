@@ -98,12 +98,14 @@ export const ENTITIES = {
       // Kolom baru di Track (RancanganSistem T7); boleh belum ada
       jenis: text(20), status_verifikasi: text(20), rekening_tujuan: text(30),
       diverifikasi_oleh: text(150), diverifikasi_pada: ts,
+      si_jadwal_id: uuid.nullable().optional(),
     }),
     toRow: (p, ids) => ({
       assignmentId: ids.assignment_id, nominal: p.jumlah_bayar, tanggal: p.tanggal_bayar, catatan: p.catatan,
       buktiUrl: Array.isArray(p.bukti_pembayaran) ? JSON.stringify(p.bukti_pembayaran) : (p.bukti_pembayaran ?? null),
       isAutoInject: Boolean(p.is_auto_inject), sourceCreatedAt: p.created_at, jenis: p.jenis, statusVerifikasi: p.status_verifikasi,
       rekeningTujuan: p.rekening_tujuan, diverifikasiOleh: p.diverifikasi_oleh, diverifikasiPada: p.diverifikasi_pada,
+      siJadwalId: p.si_jadwal_id ?? null,
     }),
     parents: { assignment_id: 'assignments' },
   },

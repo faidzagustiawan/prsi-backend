@@ -11,7 +11,7 @@
 //   KPR    : D Beban cashback/admin KPR  K Kas/bank (draft sampai bukti diunggah)
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../config/database.js';
-import { penjualanKeuangan, jadwalAngsuran, alokasiPembayaran, dokumen, outboxTrack } from '../../shared/schemas/penjualan.schema.js';
+import { penjualanKeuangan, jadwalAngsuran, alokasiPembayaran, dokumen } from '../../shared/schemas/penjualan.schema.js';
 import { trkAssignments, trkUnits, trkCustomers, trkPayments, statusPembayaranSi } from '../../shared/schemas/track.schema.js';
 import { auditLogs, users } from '../../shared/schemas/finance.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
@@ -22,6 +22,7 @@ import { buatJurnal, buatJurnalOtomatis, ringkasJurnal } from '../jurnal/jurnal.
 import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { kodePembantuPembeli, saldoAkunKp } from './penjualan.helpers.js';
 import * as h from '../hutang/hutang.helpers.js';
+import { enqueueBill } from '../../sync/billing-outbox.js';
 
 const num = (cents) => Number(centsToString(cents));
 const today = () => new Date().toISOString().slice(0, 10);
@@ -55,7 +56,7 @@ async function loadDetail(rows) {
   const asgIds = rows.map((r) => r.a.id);
   if (!pjIds.length) return { jadwal: [], alokasi: [], payments: [], riwayat: [] };
   const [jadwal, alokasi, payments, riwayat] = await Promise.all([
-    db.select().from(jadwalAngsuran).where(and(inArray(jadwalAngsuran.penjualanId, pjIds), eq(jadwalAngsuran.aktif, true)))
+    db.select().from(jadwalAngsuran).where(inArray(jadwalAngsuran.penjualanId, pjIds))
       .orderBy(asc(jadwalAngsuran.tanggal), asc(jadwalAngsuran.noUrut)),
     db.select({ al: alokasiPembayaran, tanggal: trkPayments.tanggal, trackId: trkPayments.trackId }).from(alokasiPembayaran)
       .innerJoin(trkPayments, eq(trkPayments.id, alokasiPembayaran.paymentId))
@@ -72,7 +73,7 @@ async function loadDetail(rows) {
 
 function toTagihanDto(r, d) {
   const { pj, a, unit, customer } = r;
-  const jadwal = d.jadwal.filter((j) => j.penjualanId === pj.id);
+  const jadwal = d.jadwal.filter((j) => j.penjualanId === pj.id && j.aktif);
   const alokasi = d.alokasi.filter((x) => x.al.penjualanId === pj.id);
   const payments = d.payments.filter((x) => x.p.assignmentId === a.id);
 
@@ -115,6 +116,7 @@ function toTagihanDto(r, d) {
     periodeAwal: jadwal[0]?.tanggal.slice(0, 7) ?? '',
     totalBulanAngsuran: jadwal.length,
     periodeAngsuran,
+    riwayatTagihan:d.jadwal.filter(j=>j.penjualanId===pj.id && !j.aktif).map(j=>({id:j.id,tanggal:j.tanggal,jumlah:j.jumlah,jenis:j.jenis,dokumenId:j.dokumenId,dibayar:centsToString(alokasi.filter(x=>x.al.jadwalId===j.id).reduce((n,x)=>n+toCents(x.al.nominal),0n))})),
     // Semua pembayaran Track beserta status prosesnya
     pembayaran: payments.map(({ p, s }) => ({
       id: p.id, jenis: p.jenis, tanggal: p.tanggal, nominal: toNumber(p.nominal), statusProses: s?.statusProses ?? 'belum_diproses',
@@ -255,11 +257,7 @@ export async function batal(actor, id, { tanggal, potongan, alasan }) {
     // Jadwal dinonaktifkan dan dikabarkan ke Track
     const aktif = await tx.update(jadwalAngsuran).set({ aktif: false, updatedAt: new Date() })
       .where(and(eq(jadwalAngsuran.penjualanId, id), eq(jadwalAngsuran.aktif, true))).returning();
-    if (aktif.length) {
-      await tx.insert(outboxTrack).values(aktif.map((j) => ({
-        jenis: 'jadwal_angsuran', refId: j.id, payload: { siJadwalId: j.id, trackAssignmentId: c.a.trackId, aktif: false },
-      })));
-    }
+    for (const j of aktif) await enqueueBill(tx,j.id);
     await tx.update(penjualanKeuangan).set({
       status: 'batal', tanggalBatal: tanggal, nominalPotongan: centsToString(pot), alasanBatal: alasan ?? null, jurnalBatalId, updatedAt: new Date(),
     }).where(eq(penjualanKeuangan.id, id));
@@ -299,6 +297,8 @@ export async function pindahAlokasi(actor, id, { dariJadwalId, keJadwalId, nomin
     const dari = jadwal.find((j) => j.id === dariJadwalId);
     const ke = jadwal.find((j) => j.id === keJadwalId);
     if (!dari || !ke) throw new AppError('Periode jadwal tidak ditemukan di penjualan ini.', 404);
+    const linked=await tx.select({id:trkPayments.id}).from(trkPayments).where(and(eq(trkPayments.assignmentId,c.pj.assignmentId),inArray(trkPayments.siJadwalId,[dariJadwalId,keJadwalId]))).limit(1);
+    if (linked.length) throw new AppError('Alokasi pembayaran berbasis tagihan tetap pada tagihan pilihan. Gunakan jurnal balik untuk koreksi.',409);
 
     const sumber = await tx.select().from(alokasiPembayaran).where(eq(alokasiPembayaran.jadwalId, dariJadwalId)).orderBy(desc(alokasiPembayaran.createdAt));
     let sisa = toCents(nominal);
@@ -320,6 +320,8 @@ export async function pindahAlokasi(actor, id, { dariJadwalId, keJadwalId, nomin
       ...actor, action: AuditAction.UPDATE, entity: 'alokasi', entityId: c.pj.id, summary: 'Koreksi alokasi',
       metadata: { periodeAsal: dari.tanggal.slice(0, 7), periodeTujuan: ke.tanggal.slice(0, 7), nominal },
     });
+    await enqueueBill(tx,dariJadwalId);
+    await enqueueBill(tx,keJadwalId);
   });
   return get(id);
 }

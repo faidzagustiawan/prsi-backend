@@ -45,6 +45,7 @@ export const env = {
   apiUrl: process.env.API_URL || 'http://localhost:3100',
   // Berkas lampiran (bukti transfer, nota). Di VPS arahkan ke disk yang di-backup.
   uploadDir: path.resolve(process.env.UPLOAD_DIR || './storage/lampiran'),
+  billingEnabled: process.env.SI_BILLING_ENABLED === 'true',
   // Sinkronisasi PR Track (docs/RancanganSistem.md bagian 5-7)
   sync: {
     // Saklar utama: false = worker tidak menghubungi Track sama sekali
@@ -55,7 +56,7 @@ export const env = {
     readToken: process.env.TRACK_SYNC_TOKEN || '',
     scheduleToken: process.env.TRACK_SCHEDULE_TOKEN || '',
     // v2 = cursor urutan commit (docs/TrackSyncAPI.md bagian 3.1). v1 hanya untuk Track lama.
-    protocol: process.env.SYNC_PROTOCOL === 'v2' ? 'v2' : 'v1',
+    protocol: process.env.SYNC_PROTOCOL === 'v1' ? 'v1' : 'v2',
     intervalSec: parseInt(process.env.SYNC_INTERVAL_SEC, 10) || 120,
     // Putaran berikutnya lebih cepat selama masih ada event (backlog atau aktivitas ramai)
     busyIntervalSec: parseInt(process.env.SYNC_BUSY_INTERVAL_SEC, 10) || 10,

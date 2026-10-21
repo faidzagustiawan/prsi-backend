@@ -17,6 +17,7 @@ import {
   jsonb,
   index,
   primaryKey,
+  bigserial,
 } from 'drizzle-orm/pg-core';
 import { finance, users } from './finance.schema.js';
 import { trkUnits, trkAssignments, trkPayments } from './track.schema.js';
@@ -125,6 +126,7 @@ export const jadwalAngsuran = finance.table('jadwal_angsuran', {
   noUrut: smallint('no_urut').notNull(),
   tanggal: date('tanggal').notNull(),
   jumlah: money('jumlah').notNull(),
+  jenis: varchar('jenis', { length: 20 }).notNull().default('uang_muka'),
   keterangan: varchar('keterangan', { length: 100 }),
   // false bila diganti jadwal dari adendum
   aktif: boolean('aktif').notNull().default(true),
@@ -153,6 +155,7 @@ export const alokasiPembayaran = finance.table('alokasi_pembayaran', {
 // transaksi yang sama dengan perubahan bisnisnya; dikirim worker.
 export const outboxTrack = finance.table('outbox_track', {
   id: uuid('id').defaultRandom().primaryKey(),
+  sequence: bigserial('sequence', { mode: 'number' }).notNull().unique(),
   // jadwal_angsuran, kunci_pembayaran
   jenis: varchar('jenis', { length: 30 }).notNull(),
   refId: uuid('ref_id').notNull(),

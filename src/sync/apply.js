@@ -37,7 +37,8 @@ export async function applyChange(tx, change) {
 
   const [existing] = await tx.select({ id: table.id, rowVersion: table.rowVersion, isDeleted: table.isDeleted })
     .from(table).where(eq(table.trackId, change.trackId)).for('update').limit(1);
-  if (existing && (change.snapshot ? change.rowVersion < existing.rowVersion : change.rowVersion <= existing.rowVersion)) return 'abaikan';
+  const restoreLocalTombstone=existing?.isDeleted && change.op!=='D' && change.rowVersion===existing.rowVersion;
+  if (existing && !change.resetVersion && !restoreLocalTombstone && (change.snapshot ? change.rowVersion < existing.rowVersion : change.rowVersion <= existing.rowVersion)) return 'abaikan';
 
   const meta = { rowVersion: change.rowVersion, trackSeq: change.seq ?? null, syncedAt: new Date() };
 

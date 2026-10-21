@@ -35,7 +35,7 @@ export const STATUS_DOKUMEN = ['draft', 'final', 'ditandatangani'];
 
 // Jenis pembayaran dari PR Track (Alur 2)
 export const JENIS_PEMBAYARAN = ['booking_fee', 'uang_muka', 'angsuran', 'pencairan_kpr'];
-export const STATUS_PROSES_PEMBAYARAN = ['menunggu', 'dijurnal', 'gagal_validasi', 'perlu_ditinjau'];
+export const STATUS_PROSES_PEMBAYARAN = ['menunggu', 'dijurnal', 'gagal_validasi', 'perlu_ditinjau', 'ditolak'];
 
 // Peran akun di jurnal otomatis penjualan (peta jurnal ERD)
 export const AKUN_SISTEM = {

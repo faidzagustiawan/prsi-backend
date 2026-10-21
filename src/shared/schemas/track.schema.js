@@ -19,7 +19,7 @@ import {
   integer,
   index,
 } from 'drizzle-orm/pg-core';
-import { finance } from './finance.schema.js';
+import { finance, users } from './finance.schema.js';
 
 const money = (name) => numeric(name, { precision: 18, scale: 2 });
 
@@ -107,6 +107,7 @@ export const trkPayments = finance.table('trk_payments', {
   catatan: text('catatan'),
   isAutoInject: boolean('is_auto_inject').notNull().default(false),
   sourceCreatedAt: timestamp('source_created_at', { withTimezone: true }),
+  siJadwalId: uuid('si_jadwal_id'),
 }, (t) => [index('trk_payments_assignment_idx').on(t.assignmentId)]);
 
 // Status pemrosesan pembayaran di SI (Alur 2). 1:1 dengan trk_payments.
@@ -116,6 +117,10 @@ export const statusPembayaranSi = finance.table('status_pembayaran_si', {
   statusProses: varchar('status_proses', { length: 20 }).notNull(),
   jurnalId: uuid('jurnal_id'),
   alasan: text('alasan'),
+  keputusan: varchar('keputusan', { length: 20 }),
+  verificationHash: varchar('verification_hash', { length: 64 }),
+  diverifikasiOlehSi: uuid('diverifikasi_oleh_si').references(() => users.id),
+  diverifikasiPadaSi: timestamp('diverifikasi_pada_si', { withTimezone: true }),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
@@ -129,6 +134,8 @@ export const syncCursor = finance.table('sync_cursor', {
   // menjadi "sejak kapan event tertahan transaksi Track yang masih terbuka".
   gapSeq: bigint('gap_seq', { mode: 'number' }),
   gapSince: timestamp('gap_since', { withTimezone: true }),
+  bootstrap: jsonb('bootstrap'),
+  sourceId: uuid('source_id'),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 

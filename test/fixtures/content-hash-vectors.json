@@ -1,5 +1,5 @@
 {
-  "spec": "PRTrack-PRSI content checksum v1",
+  "spec": "PRTrack-PRSI content checksum billing v2",
   "vectors": [
     {
       "entity": "companies",
@@ -340,7 +340,8 @@
         "status_verifikasi": null,
         "rekening_tujuan": null,
         "diverifikasi_oleh": null,
-        "diverifikasi_pada": null
+        "diverifikasi_pada": null,
+        "si_jadwal_id": null
       },
       "normalized": [
         "\\N",
@@ -354,10 +355,11 @@
         "\\N",
         "\\N",
         "\\N",
+        "\\N",
         "\\N"
       ],
-      "serialized": "00000000-0000-4000-8000-000000000019|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N",
-      "row_hash": "eec0a8c9472e0f26a918dd3cd203ac79"
+      "serialized": "00000000-0000-4000-8000-000000000019|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N|\\N",
+      "row_hash": "69768ae23702e62e1e4822c88882fd71"
     },
     {
       "entity": "payments",
@@ -377,7 +379,8 @@
         "status_verifikasi": "contoh status_verifikasi",
         "rekening_tujuan": "contoh rekening_tujuan",
         "diverifikasi_oleh": "contoh diverifikasi_oleh",
-        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00"
+        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00",
+        "si_jadwal_id": null
       },
       "normalized": [
         "00000000-0000-4000-8000-000000000099",
@@ -391,10 +394,11 @@
         "contoh status_verifikasi",
         "contoh rekening_tujuan",
         "contoh diverifikasi_oleh",
-        "2026-10-05T08:04:05.123456Z"
+        "2026-10-05T08:04:05.123456Z",
+        "\\N"
       ],
-      "serialized": "00000000-0000-4000-8000-000000000020|00000000-0000-4000-8000-000000000099|1500000.5|2026-10-05|contoh catatan|[\"https://example.invalid/a\", \"https://example.invalid/b\"]|true|2026-10-05T08:04:05.123456Z|contoh jenis|contoh status_verifikasi|contoh rekening_tujuan|contoh diverifikasi_oleh|2026-10-05T08:04:05.123456Z",
-      "row_hash": "b29301c212443bf1c22368d385e1dcd5"
+      "serialized": "00000000-0000-4000-8000-000000000020|00000000-0000-4000-8000-000000000099|1500000.5|2026-10-05|contoh catatan|[\"https://example.invalid/a\", \"https://example.invalid/b\"]|true|2026-10-05T08:04:05.123456Z|contoh jenis|contoh status_verifikasi|contoh rekening_tujuan|contoh diverifikasi_oleh|2026-10-05T08:04:05.123456Z|\\N",
+      "row_hash": "1818292e78e8cf23ae253a9cceebe7bf"
     },
     {
       "entity": "payments",
@@ -414,7 +418,8 @@
         "status_verifikasi": "",
         "rekening_tujuan": "",
         "diverifikasi_oleh": "",
-        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00"
+        "diverifikasi_pada": "2026-10-05T15:04:05.123456+07:00",
+        "si_jadwal_id": null
       },
       "normalized": [
         "00000000-0000-4000-8000-000000000099",
@@ -428,10 +433,11 @@
         "",
         "",
         "",
-        "2026-10-05T08:04:05.123456Z"
+        "2026-10-05T08:04:05.123456Z",
+        "\\N"
       ],
-      "serialized": "00000000-0000-4000-8000-000000000021|00000000-0000-4000-8000-000000000099|10|2026-10-05||{\"a\": 1, \"z\": 2}|false|2026-10-05T08:04:05.123456Z|||||2026-10-05T08:04:05.123456Z",
-      "row_hash": "c3259e8916b2e1dc724e80e4f9a3dd7f"
+      "serialized": "00000000-0000-4000-8000-000000000021|00000000-0000-4000-8000-000000000099|10|2026-10-05||{\"a\": 1, \"z\": 2}|false|2026-10-05T08:04:05.123456Z|||||2026-10-05T08:04:05.123456Z|\\N",
+      "row_hash": "f1654105c4cd8f797b4dec7dfc48f901"
     }
   ]
 }

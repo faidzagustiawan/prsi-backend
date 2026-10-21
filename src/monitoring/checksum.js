@@ -7,7 +7,7 @@ export const FIELDS = {
   units: [['cluster_id'], ['nomor_unit'], ['tipe_rumah'], ['luas_tanah', 'numeric'], ['luas_bangunan', 'numeric'], ['status_pembangunan']],
   customers: [['nama'], ['email'], ['nomor_telepon']],
   assignments: [['user_id'], ['unit_id'], ['tipe_pembayaran'], ['harga_total', 'numeric'], ['dp', 'numeric'], ['status_kepemilikan'], ['tanggal_pembelian', 'date']],
-  payments: [['assignment_id'], ['jumlah_bayar', 'numeric'], ['tanggal_bayar', 'date'], ['catatan'], ['bukti_pembayaran'], ['is_auto_inject', 'boolean'], ['created_at', 'timestamp'], ['jenis'], ['status_verifikasi'], ['rekening_tujuan'], ['diverifikasi_oleh'], ['diverifikasi_pada', 'timestamp']],
+  payments: [['assignment_id'], ['jumlah_bayar', 'numeric'], ['tanggal_bayar', 'date'], ['catatan'], ['bukti_pembayaran'], ['is_auto_inject', 'boolean'], ['created_at', 'timestamp'], ['jenis'], ['status_verifikasi'], ['rekening_tujuan'], ['diverifikasi_oleh'], ['diverifikasi_pada', 'timestamp'], ['si_jadwal_id']],
 };
 
 export function normalized(field, type = 'text') {

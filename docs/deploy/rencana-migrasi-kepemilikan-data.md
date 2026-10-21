@@ -153,3 +153,90 @@ Rollback tidak memerlukan restore database karena migrasi bersifat additive dan 
 2. Siapkan PRSI staging dengan DB terpisah dari DB dummy API aktif.
 3. Mulai modul pembayaran PRSI sebagai sumber sah, serta alat impor (uji pada staging).
 4. Rekam snapshot respons API customer dari staging Track sebagai baseline regresi. Ini membutuhkan aplikasi Track staging penuh dari tim PRTrack.
+
+## 7. Pekerjaan berikutnya: pembayaran berdasarkan tagihan PRSI
+
+Keputusan pemilik, 13 Oktober 2026. Status per 21 Oktober 2026: diimplementasikan
+di backend dan FE web kedua sistem, teruji lokal; belum diuji di staging dan
+belum aktif di produksi.
+
+PRSI menentukan nominal dan tenggat pembayaran rumah. Pada input pembayaran
+di PRTrack, pengguna memilih tagihan melalui dropdown; nominal berasal dari
+tagihan tersebut dan tidak lagi diisi atau diubah manual. PRTrack tetap
+mencatat tanggal pembayaran aktual dan bukti transfer. Pembayaran dikirim ke
+PRSI beserta ID tagihan untuk diproses dan dibukukan pada tagihan yang dipilih.
+
+Keputusan ini memperjelas rencana sebelumnya yang menyebut Track hanya melihat
+data uang: Track tetap menyediakan pencatatan pembayaran berdasarkan pilihan
+tagihan. Pengelolaan nominal dan tenggat tagihan berada di PRSI. Pemindahan
+kepemilikan data uang secara menyeluruh pada fase cutover tetap pekerjaan
+terpisah; pencatatan di Track perlu dibedakan dari pembayaran sah yang
+diverifikasi dan dibukukan PRSI.
+
+### Daftar pekerjaan
+
+- [x] **Backend/DB PRSI:** `finance.jadwal_angsuran` menjadi sumber nominal,
+  tenggat, urutan, dan status aktif tagihan. Keempat jenis tagihan
+  (`booking_fee`, `uang_muka`, `angsuran`, `pencairan_kpr`) dapat dibuat lewat
+  `PUT /piutang/{id}/tagihan`, dibatasi nilai SPPR, dan tagihan berpembayaran
+  tidak dapat ditimpa. Migrasi `0009_billing_sync`.
+- [x] **Kontrak sinkronisasi:** tagihan dikirim lewat `outbox_track` dengan ID
+  tetap, assignment, nominal, tenggat, urutan, status aktif, versi, dan nilai
+  kontrak. Adendum menonaktifkan jadwal lama tanpa memindahkan alokasi
+  historis. Rekonsiliasi balik membaca `billing-snapshot`.
+- [x] **Backend/DB PRTrack:** cermin `si_schedules`, kolom `si_jadwal_id` dan
+  status SI pada `payment_history`, trigger `si_guard_payment`, dan capture
+  yang menentukan nominal dari sisa tagihan. `GET /assignments/{id}/tagihan`
+  mengirim `billing_enabled`. Diterapkan lewat
+  `staging/generated/billing-v2-cutover.sql`; belum di produksi.
+- [x] **Kontrak pembayaran Track → PRSI:** whitelist payload memuat
+  `si_jadwal_id`, `request_id` idempoten, tanggal aktual, bukti, dan rekening.
+  Fixture checksum bersama mengikuti whitelist baru.
+- [x] **Alokasi PRSI:** pembayaran bertagihan dialokasikan ke `jadwal_id`
+  pilihan, bukan FIFO. Verifikasi Keuangan (terima/tolak), jurnal balik, dan
+  hasil dikirim kembali ke Track. Pembayaran lama tanpa tagihan tetap memakai
+  jalur legacy.
+- [x] **Handoff frontend (web):** SI: modal Tagihan pada Piutang (input nominal
+  dan tenggat, plafon SPPR, status kunci) dan verifikasi pembayaran Track.
+  PRTrack web: dropdown tagihan, nominal terkunci, bukti wajib sebelum kirim,
+  status SI pada riwayat. Dikerjakan atas instruksi pemilik 21 Oktober 2026.
+- [ ] **Aplikasi mobile PRTrack (Flutter):** belum diimplementasikan. Setelah
+  `SI_BILLING_ENABLED` aktif, pencatatan tanpa tagihan ditolak.
+- [x] **Uji otomatis lokal:** integrasi dua database 21/21 (tagihan ke-2
+  sebelum ke-1, nominal manipulasi, tagihan asing/nonaktif/lunas, replay,
+  adendum, reversal, plafon), regresi SI 20/20, unit Track 15/15.
+- [ ] **Uji staging dan UAT:** skenario yang sama pada salinan tersanitasi
+  PostgreSQL 16, UI di browser, dan UAT Keuangan termasuk data lama (lihat
+  bawah).
+
+### Dampak terhadap data sebelum PRSI
+
+Ringkasan pemeriksaan kode 21 Oktober 2026. Rincian keputusan wajib masuk UAT
+Keuangan dan gladi cutover.
+
+- Migrasi Track bersifat aditif. Baris `payment_history` lama mendapat
+  `si_jadwal_id` kosong dan `status_si` bawaan `menunggu`; API membaca baris
+  tanpa tagihan sebagai `diterima`, sehingga tampilan customer tidak berubah.
+- `total_dibayar` lama tidak berubah saat migrasi. Begitu SI mengirim nilai
+  kontrak untuk penjualan KPR, auto-injeksi KPR lama tidak lagi dihitung, jadi
+  total dibayar customer turun ke kas aktual.
+- Constraint baru `total_dibayar <= coalesce(si_contract_total, harga_total)`
+  lolos untuk data lama, tetapi kiriman nilai kontrak SI yang lebih kecil dari
+  total lama akan ditolak Track dan tertahan di outbox.
+- Setelah flag aktif, Track hanya menerima pembayaran bertagihan. Penjualan
+  lama tanpa SPPR final di SI tidak bisa dibuatkan tagihan, sehingga tidak bisa
+  mencatat pembayaran sampai SPPR dan tagihannya disiapkan.
+- Saat sync SI berjalan, pembayaran lama yang terverifikasi di Track diproses
+  jalur legacy: dijurnal otomatis pada tanggal aslinya bila rekening cocok,
+  atau `gagal_validasi`/draft bila rekening/bukti/periode tidak memenuhi. Tidak
+  ada batas tanggal; saldo awal yang sudah diinput manual dapat terhitung ganda.
+  Opsi penanganannya ada di [opsi-cutoff-pembayaran-lama.md](opsi-cutoff-pembayaran-lama.md).
+- Pembayaran lama yang dialokasikan tanpa jadwal (mis. booking fee) tidak
+  dihitung dalam plafon tagihan SI; Keuangan perlu memperhitungkannya agar
+  tidak menagih ulang.
+- Pembayaran lama yang belum dijurnal SI masih dapat diubah/dihapus di Track.
+
+Urutan pengerjaan: kontrak tagihan dan pembayaran → backend/DB kedua sistem →
+uji sinkronisasi dan alokasi di staging → handoff UI ke tim frontend.
+Pencatatan keputusan ini tidak mengaktifkan `SYNC_ENABLED` atau
+`SYNC_WRITE_ENABLED`, dan tidak mengizinkan perubahan/deployment produksi.

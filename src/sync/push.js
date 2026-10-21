@@ -12,7 +12,7 @@ const BATAS_PERINGATAN = 5;
 
 async function kirim(client, row) {
   // Versi naik menurut waktu dibuat; Track menolak (409) versi yang lebih lama
-  const payload = { ...row.payload, versi: row.createdAt.getTime() };
+  const payload = { ...row.payload, versi: row.sequence };
   if (row.jenis === 'jadwal_angsuran') {
     const res = await client.putSchedule(row.refId, payload, row.id);
     const trackId = res.json?.data?.track_id ?? res.json?.track_id;
@@ -23,13 +23,17 @@ async function kirim(client, row) {
     await client.putPaymentLock(row.payload.trackPaymentId, payload, row.id);
     return;
   }
+  if (row.jenis === 'hasil_pembayaran') {
+    await client.putPaymentResult(row.payload.trackPaymentId, payload, row.id);
+    return;
+  }
   throw new TrackError(`Jenis outbox tidak dikenal: ${row.jenis}`, { retryable: false });
 }
 
 export async function pushOutbox(client, counts, { limit = 200 } = {}) {
   const rows = await db.select().from(outboxTrack)
     .where(inArray(outboxTrack.status, ['tertunda', 'gagal']))
-    .orderBy(asc(outboxTrack.createdAt)).limit(limit);
+    .orderBy(asc(outboxTrack.sequence)).limit(limit);
   const tertahan = new Set();
 
   for (const row of rows) {
@@ -39,12 +43,6 @@ export async function pushOutbox(client, counts, { limit = 200 } = {}) {
       await db.update(outboxTrack).set({ status: 'terkirim', dikirimPada: new Date(), galatTerakhir: null }).where(eq(outboxTrack.id, row.id));
       counts.terkirim += 1;
     } catch (err) {
-      if (err instanceof TrackError && err.status === 409) {
-        // Track sudah punya versi yang lebih baru: kiriman ini dianggap diterapkan
-        await db.update(outboxTrack).set({ status: 'terkirim', dikirimPada: new Date(), galatTerakhir: 'versi lebih lama (409)' }).where(eq(outboxTrack.id, row.id));
-        counts.terkirim += 1;
-        continue;
-      }
       if (!(err instanceof TrackError)) throw err;
       tertahan.add(row.refId);
       const percobaan = row.percobaan + 1;

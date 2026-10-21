@@ -5,7 +5,8 @@
 // - Rekonsiliasi sekali sehari pada SYNC_RECONCILE_HOUR.
 // - SYNC_ENABLED=false: worker tidak menghubungi Track (saklar darurat).
 import { env } from './config/env.js';
-import { closeDatabase } from './config/database.js';
+import { closeDatabase, db } from './config/database.js';
+import { assertIsolatedRole } from './config/dbGuard.js';
 import { runCycle, runReconcile } from './sync/runner.js';
 import { assertConfig } from './sync/track-client.js';
 
@@ -42,6 +43,7 @@ async function tick() {
       const r = await runReconcile();
       lastReconcileDay = day;
       log('[rekonsiliasi]', r.dilewati ? r.alasan : JSON.stringify(r.result));
+      if(r.billing) log('[rekonsiliasi billing]',JSON.stringify(r.billing.result ?? {status:r.billing.status,pesan:r.billing.pesan}));
     }
   } catch (err) {
     log('[sync] galat:', err.message);
@@ -64,6 +66,7 @@ if (!env.sync.enabled) {
   process.exit(0);
 }
 assertConfig();
+await assertIsolatedRole(db, { allowUnsafe: env.allowUnsafeDbRole });
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 log(`Worker sinkronisasi jalan: ${env.sync.trackApiUrl}, tiap ${env.sync.intervalSec} detik.`);

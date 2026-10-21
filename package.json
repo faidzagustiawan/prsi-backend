@@ -19,7 +19,8 @@
     "user:security": "node scripts/update-user-security.js",
     "seed:dev": "node scripts/seed-dev.js",
     "worker": "node src/worker.js",
-    "mock:track": "node scripts/mock-track.js"
+    "mock:track": "node scripts/mock-track.js",
+    "test:billing": "node --test test/integration.billing.js"
   },
   "dependencies": {
     "@fastify/cookie": "^11.0.2",

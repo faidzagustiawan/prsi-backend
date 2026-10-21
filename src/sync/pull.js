@@ -11,6 +11,7 @@ import { syncCursor, syncError } from '../shared/schemas/track.schema.js';
 import { applyChange, ApplyError } from './apply.js';
 import { ENTITIES, ENTITY_ORDER } from './mapping.js';
 import { parseCursor } from './track-client.js';
+import { TrackError } from './track-client.js';
 
 const CURSOR_ID = 'global';
 const MAX_PERCOBAAN = 20;
@@ -24,7 +25,7 @@ export async function getCursor(tx = db) {
 const setCursor = (tx, values) => tx.update(syncCursor).set({ ...values, updatedAt: new Date() }).where(eq(syncCursor.id, CURSOR_ID));
 
 const eventToChange = (e) => ({
-  entity: e.entity, trackId: e.entity_id, op: e.op, rowVersion: e.row_version, seq: e.seq, payload: e.payload, snapshot: Boolean(e.snapshot),
+  entity: e.entity, trackId: e.entity_id, op: e.op, rowVersion: e.row_version, seq: e.seq, payload: e.payload, snapshot: Boolean(e.snapshot),resetVersion:Boolean(e.resetVersion),
 });
 
 async function catatError(tx, e, err) {
@@ -65,7 +66,10 @@ async function applyEvent(e, counts, { advanceCursor }) {
  * halaman diulang utuh.
  */
 async function applyBatch(events, counts, { cursor } = {}) {
-  if (!events.length) return;
+  if (!events.length) {
+    if (cursor) await db.transaction(tx => setCursor(tx, cursor));
+    return;
+  }
   await db.transaction(async (tx) => {
     // Satu query untuk tahu baris mana yang punya galat terbuka, bukan satu UPDATE per event
     const ids = [...new Set(events.map((e) => e.entity_id))];
@@ -155,10 +159,12 @@ export async function pullEvents(client, counts, { now = () => new Date(), cfg =
  */
 export async function pullEventsV2(client, counts, { now = () => new Date(), cfg = env.sync } = {}) {
   const start = await getCursor();
+  if(env.billingEnabled && !start.sourceId) throw new TrackError('Identitas cermin belum ditetapkan. Jalankan muat ulang dengan sourceId yang dikonfirmasi.',{retryable:false});
   let after = `${start.cursorTxid ?? 0}:${start.cursorSeq}`;
   let held = false;
   for (let page = 0; page < 1000; page += 1) {
     const res = await client.eventsV2(after, cfg.pageSize);
+    if (start.sourceId && res.source_id !== start.sourceId) throw new Error('Identitas sumber Track berubah. Resnapshot terkontrol diperlukan.');
     held = res.held_by_open_transaction === true;
     if (res.events.length) {
       const next = parseCursor(res.next_after);
@@ -190,15 +196,16 @@ async function mirrorKosong() {
 }
 
 /** Tarik seluruh baris satu entitas lewat snapshot. Mengembalikan track_id yang terlihat. */
-export async function pullSnapshot(client, entity, counts) {
+export async function pullSnapshot(client, entity, counts, { bootstrap } = {}) {
   const seen = new Set();
-  let after = '';
+  let after = bootstrap?.after ?? '';
   let maxSeq = null;
   for (let page = 0; page < 100_000; page += 1) {
     const res = await client.snapshot(entity, after);
     if (maxSeq === null) maxSeq = res.max_seq;
     for (const row of res.rows) seen.add(row.id);
-    await applyBatch(res.rows.map((row) => ({ entity, entity_id: row.id, op: 'U', row_version: row.row_version, payload: row, snapshot: true })), counts);
+    const checkpoint = bootstrap ? { bootstrap: { ...bootstrap, after: res.rows.at(-1)?.id ?? after } } : undefined;
+    await applyBatch(res.rows.map((row) => ({ entity, entity_id: row.id, op: 'U', row_version: row.row_version, payload: row, snapshot: true,resetVersion:Boolean(bootstrap?.rebuild) })), counts, { cursor: checkpoint });
     if (!res.has_more || !res.rows.length) break;
     after = res.rows.at(-1).id;
   }
@@ -214,12 +221,17 @@ export async function pullSnapshot(client, entity, counts) {
  */
 export async function initialLoadIfEmpty(client, counts, { protocol = env.sync.protocol } = {}) {
   const cursor = await getCursor();
+  if (cursor.bootstrap) {
+    if (cursor.bootstrap.protocol !== protocol) throw new Error('Selesaikan bootstrap sebelum mengubah protokol.');
+    return resumeBootstrap(client, counts, cursor.bootstrap);
+  }
   if (cursor.cursorSeq > 0 || cursor.cursorTxid !== null || !(await mirrorKosong())) return false;
   if (protocol === 'v2') {
-    const start = parseCursor((await client.startV2()).after);
-    for (const entity of ENTITY_ORDER) await pullSnapshot(client, entity, counts);
-    await setCursor(db, { cursorTxid: start.txid, cursorSeq: start.seq });
-    return true;
+    const remote = await client.startV2();
+    const start = parseCursor(remote.after);
+    const bootstrap = { protocol, start, entityIndex: 0, after: '' };
+    await setCursor(db, { bootstrap,sourceId:remote.source_id ?? null });
+    return resumeBootstrap(client, counts, bootstrap);
   }
   let startSeq = null;
   for (const entity of ENTITY_ORDER) {
@@ -228,4 +240,33 @@ export async function initialLoadIfEmpty(client, counts, { protocol = env.sync.p
   }
   await setCursor(db, { cursorSeq: startSeq ?? 0 });
   return true;
+}
+
+async function resumeBootstrap(client, counts, initial) {
+  let state = initial;
+  const remote=await client.startV2();
+  const current=await getCursor();
+  if(current.sourceId && current.sourceId!==remote.source_id) throw new Error('Identitas sumber berubah di tengah bootstrap.');
+  for (let i = state.entityIndex; i < ENTITY_ORDER.length; i += 1) {
+    await pullSnapshot(client, ENTITY_ORDER[i], counts, { bootstrap: state });
+    if(state.rebuild) {
+      const {table}=ENTITIES[ENTITY_ORDER[i]];
+      await db.update(table).set({isDeleted:true,syncedAt:new Date()})
+        .where(and(eq(table.isDeleted,false),sql`${table.syncedAt}<${state.startedAt}::timestamptz`));
+    }
+    state = { ...state, entityIndex: i + 1, after: '' };
+    await setCursor(db, { bootstrap: state });
+  }
+  await setCursor(db, { cursorTxid: state.start.txid, cursorSeq: state.start.seq, bootstrap: null });
+  return true;
+}
+
+export async function startResnapshot(client,sourceId) {
+  const remote=await client.startV2();
+  if(!remote.source_id || remote.source_id!==sourceId || remote.contract_version!==2) throw new Error('Konfirmasi identitas sumber dan kontrak billing v2 diperlukan.');
+  const state=await getCursor();
+  if(state.bootstrap) throw new Error('Bootstrap sedang berjalan; lanjutkan putaran yang ada.');
+  const bootstrap={protocol:'v2',start:parseCursor(remote.after),entityIndex:0,after:'',rebuild:true,startedAt:new Date().toISOString()};
+  await setCursor(db,{sourceId,bootstrap});
+  return bootstrap;
 }

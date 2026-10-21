@@ -200,6 +200,37 @@ test('backend integration with real PostgreSQL', async (t) => {
       assert.equal(updated.dokumen_id, adendum.id);
       assert.equal(Number(updated.nilai_sppr), 1200);
     });
+    await t.test('legacy Track payments rejected by journal rules do not stop the batch', async () => {
+      // Proyek 0: saldo awal mulai 2026-01-01 dan periode 2026-11 sudah ditutup di tes sebelumnya.
+      await sql`UPDATE finance.akun SET no_rekening = '9900-1' WHERE id = ${accounts[0]}`;
+      await sql`INSERT INTO finance.akun_sistem (kunci, akun_id) VALUES ('uang_muka_penjualan', ${accounts[2]}) ON CONFLICT DO NOTHING`;
+      const [{ id: assignment }] = await sql`SELECT id FROM finance.trk_assignments WHERE unit_id = ${units[0]} LIMIT 1`;
+      const payment = async (tanggal, statusVerifikasi) => {
+        const id = randomUUID();
+        await sql`INSERT INTO finance.trk_payments (id, track_id, assignment_id, tanggal, nominal, jenis, status_verifikasi, rekening_tujuan, bukti_url)
+          VALUES (${id}, ${randomUUID()}, ${assignment}, ${tanggal}, 50, 'uang_muka', ${statusVerifikasi}, '99001', 'https://evidence.example.test/a.jpg')`;
+        return id;
+      };
+      const beforeOpening = await payment('2025-12-15', 'terverifikasi');
+      const closedPeriod = await payment('2026-11-05', 'terverifikasi');
+      const later = await payment('2026-12-01', null);
+      const result = await call('POST', '/pembayaran-track/proses');
+      assert.equal(result.gagal_validasi, 2);
+      const status = async (id) => (await sql`SELECT status_proses, alasan, jurnal_id FROM finance.status_pembayaran_si WHERE payment_id = ${id}`)[0];
+      const opening = await status(beforeOpening);
+      assert.equal(opening.status_proses, 'gagal_validasi');
+      assert.match(opening.alasan, /saldo awal/);
+      assert.equal(opening.jurnal_id, null);
+      const closed = await status(closedPeriod);
+      assert.equal(closed.status_proses, 'gagal_validasi');
+      assert.match(closed.alasan, /dikunci/);
+      assert.equal((await status(later)).status_proses, 'menunggu', 'payments after a rejected one are still processed');
+      const [{ n }] = await sql`SELECT count(*)::int n FROM finance.jurnal WHERE ref_type = 'trk_payments' AND ref_id IN (${beforeOpening}, ${closedPeriod})`;
+      assert.equal(n, 0);
+      // Tidak dipilih ulang otomatis; proses ulang manual tetap memberi alasan yang sama tanpa error 422.
+      assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0);
+      assert.equal((await call('POST', `/pembayaran-track/${closedPeriod}/proses`)).statusProses, 'gagal_validasi');
+    });
     await t.test('SHM status history, duplicate prevention and collateral validation', async () => {
       const input = { nomorShm: 'SHM-TEST', unitId: units[0], status: 'di_kantor', lokasi: 'Kantor' };
       const s = await call('POST', '/shm', input, 201);

@@ -9,7 +9,9 @@ import { outboxTrack } from '../../shared/schemas/penjualan.schema.js';
 import { authorize } from '../../middleware/authorize.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { getCursor } from '../../sync/pull.js';
-import { runCycle, runReconcile } from '../../sync/runner.js';
+import { runCycle, runReconcile, prepareResnapshot,prepareBillingReplay } from '../../sync/runner.js';
+import { z } from 'zod';
+import { validate } from '../../middleware/validate.js';
 import { TrackError } from '../../sync/track-client.js';
 
 const tags = ['Sinkronisasi PR Track'];
@@ -22,6 +24,7 @@ async function status() {
   const [terakhir] = await db.select().from(syncLog).where(and(eq(syncLog.arah, 'tarik'), eq(syncLog.status, 'sukses')))
     .orderBy(desc(syncLog.mulai)).limit(1);
   const [rekon] = await db.select().from(syncLog).where(eq(syncLog.arah, 'rekonsiliasi')).orderBy(desc(syncLog.mulai)).limit(1);
+  const [billingRekon]=await db.select().from(syncLog).where(eq(syncLog.arah,'rekon_billing')).orderBy(desc(syncLog.mulai)).limit(1);
   const [{ errorTerbuka }] = await db.select({ errorTerbuka: count() }).from(syncError).where(isNull(syncError.resolvedAt));
   const outbox = await db.select({ status: outboxTrack.status, n: count(), maks: sql`MAX(${outboxTrack.percobaan})`.mapWith(Number) })
     .from(outboxTrack).where(inArray(outboxTrack.status, ['tertunda', 'gagal'])).groupBy(outboxTrack.status);
@@ -36,6 +39,7 @@ async function status() {
   const gagal = outbox.find((o) => o.status === 'gagal');
   if (gagal?.maks >= 5) peringatan.push(`${gagal.n} kiriman ke Track gagal berulang.`);
   if (rekon?.status === 'gagal') peringatan.push(`Rekonsiliasi terakhir gagal: ${rekon.pesan}`);
+  if(billingRekon?.status==='beda' || billingRekon?.status==='gagal') peringatan.push('Cermin tagihan/hasil pembayaran Track perlu direkonsiliasi dengan SI.');
   const v2 = env.sync.protocol === 'v2';
   // v2: gap_since = event tertahan transaksi Track yang masih terbuka
   if (v2 && cursor.gapSince && (Date.now() - cursor.gapSince.getTime()) / 1000 >= env.sync.heldWarnSec) {
@@ -45,6 +49,8 @@ async function status() {
   return {
     aktif: env.sync.enabled,
     protokol: env.sync.protocol,
+    sourceId:cursor.sourceId,
+    bootstrap:cursor.bootstrap,
     cursor: v2 ? `${cursor.cursorTxid ?? 0}:${cursor.cursorSeq}` : String(cursor.cursorSeq),
     cursorSeq: cursor.cursorSeq,
     menungguLubangSeq: v2 ? null : cursor.gapSeq,
@@ -55,6 +61,7 @@ async function status() {
     outbox: Object.fromEntries(outbox.map((o) => [o.status, Number(o.n)])),
     antreanPembayaran: Object.fromEntries(antrean.map((a) => [a.status, Number(a.n)])),
     rekonsiliasiTerakhir: rekon ? { waktu: rekon.mulai, status: rekon.status, pesan: rekon.pesan } : null,
+    rekonsiliasiBillingTerakhir:billingRekon?{waktu:billingRekon.mulai,status:billingRekon.status,selisih:billingRekon.jmlGagal}:null,
     peringatan,
   };
 }
@@ -70,6 +77,12 @@ const runOrFail = async (fn) => {
 
 export default async function sinkronRoutes(fastify) {
   const guard = [fastify.authenticate, authorize('keuangan', 'admin')];
+  fastify.post('/kirim-ulang',{preHandler:guard,schema:{tags,description:'Antrekan snapshot tagihan dan hasil pembayaran terkini untuk pemulihan cermin Track. Tetap tunduk pada SYNC_WRITE_ENABLED.'}},
+    async()=>({success:true,message:'Snapshot balik diantrekan',data:await runOrFail(prepareBillingReplay)}));
+  fastify.post('/muat-ulang',{
+    preHandler:[...guard,validate({body:z.object({sourceId:z.uuid()})})],
+    schema:{tags,description:'Siapkan resnapshot setelah cursor kedaluwarsa/perubahan sumber. Tidak menghapus jurnal, alokasi, atau riwayat. Putaran worker berikutnya melanjutkan bootstrap.'},
+  },async request=>({success:true,message:'Muat ulang disiapkan',data:await prepareResnapshot(request.body.sourceId)}));
 
   fastify.get('/status', { preHandler: guard, schema: { tags, description: 'Kesehatan sinkronisasi: jeda data, error, outbox, antrean pembayaran' } },
     async () => ({ success: true, message: 'Success', data: await status() }));

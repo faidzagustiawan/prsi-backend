@@ -42,7 +42,7 @@ const MIRRORS = {
   units: [['kode','nomor_unit','trim'],['tipe','tipe_rumah'],['luas_tanah','luas_tanah','numeric'],['luas_bangunan','luas_bangunan','numeric'],['status','status_pembangunan'],['cluster_id','cluster_id','fk:clusters']],
   customers: [['nama','nama','trim'],['email','email'],['no_hp','nomor_telepon'],['tempat_lahir','tempat_lahir'],['tanggal_lahir','tanggal_lahir','date'],['pekerjaan','pekerjaan'],['alamat','alamat'],['no_ktp','no_ktp']],
   assignments: [['unit_id','unit_id','fk:units'],['customer_id','user_id','fk:customers'],['tipe_pembayaran','tipe_pembayaran'],['harga','harga_total','numeric'],['uang_muka','dp','numeric'],['status','status_kepemilikan'],['tanggal','tanggal_pembelian','timestamptz']],
-  payments: [['assignment_id','assignment_id','fk:assignments'],['nominal','jumlah_bayar','numeric'],['tanggal','tanggal_bayar','date'],['jenis','jenis'],['status_verifikasi','status_verifikasi'],['diverifikasi_oleh','diverifikasi_oleh'],['diverifikasi_pada','diverifikasi_pada','timestamptz'],['rekening_tujuan','rekening_tujuan'],['catatan','catatan'],['is_auto_inject','is_auto_inject','bool'],['source_created_at','created_at','timestamptz']],
+  payments: [['assignment_id','assignment_id','fk:assignments'],['si_jadwal_id','si_jadwal_id','uuid'],['nominal','jumlah_bayar','numeric'],['tanggal','tanggal_bayar','date'],['jenis','jenis'],['status_verifikasi','status_verifikasi'],['diverifikasi_oleh','diverifikasi_oleh'],['diverifikasi_pada','diverifikasi_pada','timestamptz'],['rekening_tujuan','rekening_tujuan'],['catatan','catatan'],['is_auto_inject','is_auto_inject','bool'],['source_created_at','created_at','timestamptz']],
 };
 
 export function mirrorInvariantSql(entity) {

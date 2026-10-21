@@ -6,6 +6,7 @@ import { uuidSchema, isoDate, nominal, idParams, optionalText } from '../../shar
 import { STATUS_PROSES_PEMBAYARAN } from '../../shared/constants.js';
 import * as piutang from './piutang.service.js';
 import * as pembayaran from './pembayaran.service.js';
+import * as tagihan from './tagihan.service.js';
 
 const ok = (data, message = 'Success') => ({ success: true, message, data });
 const positif = nominal.refine((v) => v > 0, 'Nominal harus lebih dari 0');
@@ -13,6 +14,11 @@ const positif = nominal.refine((v) => v > 0, 'Nominal harus lebih dari 0');
 export async function piutangRoutes(fastify) {
   const guard = keuanganOnly(fastify);
   const tags = ['Piutang'];
+  fastify.get('/:id/tagihan',{preHandler:[...guard,validate({params:idParams})],schema:{tags,description:'Seluruh tagihan penjualan dengan realisasi, status kunci, flag billing, dan plafon SPPR.'}},async request=>ok(await tagihan.list(request.params.id)));
+  fastify.put('/:id/tagihan',{
+    preHandler:[...guard,validate({params:idParams,body:z.object({id:uuidSchema.optional(),noUrut:z.number().int().min(1).max(32767),tanggal:isoDate,jumlah:positif,jenis:z.enum(['booking_fee','uang_muka','angsuran','pencairan_kpr']),keterangan:optionalText(100),aktif:z.boolean().default(true)})})],
+    schema:{tags,description:'Buat/ubah tagihan rumah. Tagihan dengan pembayaran tidak dapat ditimpa; total tidak boleh melampaui nilai SPPR.'},
+  },async request=>ok(await tagihan.save(actorOf(request),request.params.id,request.body),'Tagihan disimpan'));
 
   fastify.get('/', {
     preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema.optional(), statusBast: z.enum(['belum_bast', 'sudah_bast']).optional() }) })],
@@ -54,6 +60,10 @@ export async function piutangRoutes(fastify) {
 export async function pembayaranTrackRoutes(fastify) {
   const guard = keuanganOnly(fastify);
   const tags = ['Pembayaran PR Track'];
+  fastify.post('/:id/verifikasi', {
+    preHandler:[...guard,validate({params:idParams,body:z.object({keputusan:z.enum(['terima','tolak']),alasan:z.string().trim().min(1).max(1000).optional()}).refine(b=>b.keputusan!=='tolak'||b.alasan,'Alasan penolakan wajib diisi')})],
+    schema:{tags,description:'Keuangan SI memverifikasi pembayaran berdasarkan tagihan. Penolakan wajib beralasan; jurnal terposting dikoreksi lewat jurnal balik.'},
+  },async request=>ok(await pembayaran.verifikasi(actorOf(request),request.params.id,request.body),'Keputusan verifikasi disimpan'));
 
   fastify.get('/', {
     preHandler: [...guard, validate({

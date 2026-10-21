@@ -13,12 +13,12 @@
 //
 // Pindah kavling dilakukan di PR Track lebih dulu (unit berganti pada
 // assignment yang sama); adendum mengambil kavling terkini dari cermin.
-import { and, asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '../../config/database.js';
 import { masterPt } from '../../shared/schemas/akuntansi.schema.js';
-import { trkUnits } from '../../shared/schemas/track.schema.js';
-import { dokumen, dokumenPasal, penjualanKeuangan, jadwalAngsuran, outboxTrack } from '../../shared/schemas/penjualan.schema.js';
+import { trkUnits, trkPayments, statusPembayaranSi } from '../../shared/schemas/track.schema.js';
+import { dokumen, dokumenPasal, penjualanKeuangan, jadwalAngsuran, alokasiPembayaran } from '../../shared/schemas/penjualan.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { toCents, centsToString, toNumber } from '../../shared/utils/money.js';
 import { nextNumber, pad } from '../../shared/utils/penomoran.js';
@@ -26,6 +26,9 @@ import { recordAuditTx, AuditAction } from '../../shared/utils/audit.js';
 import { buatJurnal } from '../jurnal/jurnal.service.js';
 import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { findAssignment, kodePembantuPembeli, saldoAkunKp } from '../penjualan/penjualan.helpers.js';
+import { enqueueBill } from '../../sync/billing-outbox.js';
+import { remainingRows } from '../penjualan/tagihan.service.js';
+import { env } from '../../config/env.js';
 import { realokasiPenjualan } from '../penjualan/pembayaran.service.js';
 
 const nett = (data) => toCents(data.hargaAwal ?? 0) + toCents(data.bphtb ?? 0) + toCents(data.ajbBbn ?? 0);
@@ -119,28 +122,33 @@ export async function finalisasiTx(tx, actor, d) {
     throw new AppError('Penjualan sudah BAST; nilai SPPR tidak bisa diubah lewat adendum.', 409);
   }
 
-  // Jadwal lama nonaktif, jadwal baru masuk; keduanya dikabarkan ke Track
-  const lama = await tx.update(jadwalAngsuran).set({ aktif: false, updatedAt: new Date() })
-    .where(and(eq(jadwalAngsuran.penjualanId, pj.id), eq(jadwalAngsuran.aktif, true))).returning();
-  const baris = d.jadwal?.baris ?? [];
-  const baru = baris.length
-    ? await tx.insert(jadwalAngsuran).values(baris.map((r, i) => ({
-      penjualanId: pj.id, assignmentId: a.id, dokumenId: d.id, noUrut: i + 1, tanggal: r.tanggal,
-      jumlah: centsToString(toCents(r.jumlah)), keterangan: r.keterangan || `DP ${i + 1}`,
-    }))).returning()
-    : [];
-  const kirim = [
-    ...lama.map((j) => ({ jenis: 'jadwal_angsuran', refId: j.id, payload: { siJadwalId: j.id, trackAssignmentId: a.trackId, aktif: false } })),
-    ...baru.map((j) => ({
-      jenis: 'jadwal_angsuran', refId: j.id,
-      payload: { siJadwalId: j.id, trackAssignmentId: a.trackId, noUrut: j.noUrut, tanggal: j.tanggal, jumlah: toNumber(j.jumlah), keterangan: j.keterangan, aktif: true },
-    })),
-  ];
-  if (kirim.length) await tx.insert(outboxTrack).values(kirim);
+  // Billing adendum replaces only down-payment bills; settled allocations retain original IDs.
+  const billing=env.billingEnabled;
+  const oldRows=await tx.select().from(jadwalAngsuran).where(and(eq(jadwalAngsuran.penjualanId,pj.id),eq(jadwalAngsuran.aktif,true))).for('update');
+  const affected=oldRows.filter(j=>!billing || j.jenis==='uang_muka');
+  if (billing && affected.length) {
+    const pending=await tx.select({id:trkPayments.id}).from(trkPayments)
+      .leftJoin(statusPembayaranSi,eq(statusPembayaranSi.paymentId,trkPayments.id))
+      .where(and(inArray(trkPayments.siJadwalId,affected.map(j=>j.id)),eq(trkPayments.isDeleted,false),
+        sql`coalesce(${statusPembayaranSi.statusProses},'menunggu') not in ('dijurnal','ditolak') and coalesce(${statusPembayaranSi.keputusan},'') <> 'dikoreksi'`)).limit(1);
+    if (pending.length) throw new AppError('Selesaikan pengajuan pembayaran sebelum mengganti jadwal lewat adendum.',409);
+  }
+  const [{paid}] = await tx.select({paid:sql`coalesce(sum(${alokasiPembayaran.nominal}),0)::text`}).from(alokasiPembayaran)
+    .innerJoin(jadwalAngsuran,eq(jadwalAngsuran.id,alokasiPembayaran.jadwalId))
+    .where(and(eq(jadwalAngsuran.penjualanId,pj.id),eq(jadwalAngsuran.jenis,'uang_muka')));
+  if (billing && toCents(paid)>toCents(d.data?.uangMuka ?? 0)) throw new AppError('Uang muka baru lebih kecil dari pembayaran historis. Selesaikan koreksi keuangan terlebih dahulu.',409);
+  const lama=affected;
+  if (lama.length) await tx.update(jadwalAngsuran).set({aktif:false,updatedAt:new Date()}).where(inArray(jadwalAngsuran.id,lama.map(j=>j.id)));
+  const baris=billing?remainingRows(d.jadwal?.baris ?? [],paid):(d.jadwal?.baris ?? []);
+  const baru=baris.length?await tx.insert(jadwalAngsuran).values(baris.map((r,i)=>({
+    penjualanId:pj.id,assignmentId:a.id,dokumenId:d.id,noUrut:i+1,tanggal:r.tanggal,
+    jumlah:centsToString(toCents(r.jumlah)),keterangan:r.keterangan || `DP ${i+1}`,
+  }))).returning():[];
 
   await tx.update(penjualanKeuangan).set({ dokumenId: d.id, nilaiSppr: centsToString(nilaiBaru), updatedAt: new Date() })
     .where(eq(penjualanKeuangan.id, pj.id));
-  const dialokasi = await realokasiPenjualan(tx, actor, pj.id, a.id);
+  const dialokasi = billing ? 0 : await realokasiPenjualan(tx, actor, pj.id, a.id);
+  for (const j of [...oldRows,...baru]) await enqueueBill(tx,j.id);
 
   const biaya = toCents(d.data?.adendum?.biayaPindah ?? 0);
   if (biaya > 0n) {

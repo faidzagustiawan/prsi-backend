@@ -9,7 +9,7 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from 'drizzle-orm';
 import { randomUUID } from 'node:crypto';
 import { db } from '../../config/database.js';
-import { dokumen, dokumenPasal, templateDokumen, templatePasal, pasal, penjualanKeuangan, jadwalAngsuran, outboxTrack } from '../../shared/schemas/penjualan.schema.js';
+import { dokumen, dokumenPasal, templateDokumen, templatePasal, pasal, penjualanKeuangan, jadwalAngsuran } from '../../shared/schemas/penjualan.schema.js';
 import { masterPt, lampiran } from '../../shared/schemas/akuntansi.schema.js';
 import { trkUnits } from '../../shared/schemas/track.schema.js';
 import { auditLogs, users } from '../../shared/schemas/finance.schema.js';
@@ -22,6 +22,7 @@ import { buatJurnal, toLampiranDto } from '../jurnal/jurnal.service.js';
 import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { findAssignment, kodePembantuPembeli, saldoAkunKp, hitungJadwal } from '../penjualan/penjualan.helpers.js';
 import * as adendum from './adendum.service.js';
+import { enqueueBill } from '../../sync/billing-outbox.js';
 
 const STATUS_FIELD = 'status';
 
@@ -390,11 +391,7 @@ export async function finalisasi(actor, id) {
         penjualanId: pj.id, assignmentId: a.id, dokumenId: d.id, noUrut: i + 1, tanggal: r.tanggal,
         jumlah: centsToString(toCents(r.jumlah)), keterangan: r.keterangan || `DP ${i + 1}`,
       }))).returning();
-      // Dikirim worker ke PR Track (RancanganSistem bagian 6)
-      await tx.insert(outboxTrack).values(inserted.map((j) => ({
-        jenis: 'jadwal_angsuran', refId: j.id,
-        payload: { siJadwalId: j.id, trackAssignmentId: a.trackId, noUrut: j.noUrut, tanggal: j.tanggal, jumlah: toNumber(j.jumlah), keterangan: j.keterangan, aktif: true },
-      })));
+      for (const j of inserted) await enqueueBill(tx,j.id);
     }
 
     // Booking fee yang sudah masuk pindah dari titipan ke uang muka penjualan

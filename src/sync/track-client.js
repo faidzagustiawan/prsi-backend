@@ -94,6 +94,7 @@ export function createTrackClient(cfg = env.sync) {
      */
     async eventsV2(after, limit = cfg.pageSize) {
       const json = await get(`sync/v2/events?after=${encodeURIComponent(after)}&limit=${limit}`);
+      if(env.billingEnabled && (json?.contract_version!==2 || !/^[0-9a-f-]{36}$/i.test(json?.source_id??''))) throw new TrackError('Kontrak billing Track tidak kompatibel.',{retryable:false});
       if (!json || !Array.isArray(json.events) || !isCursor(json.next_after) || typeof json.has_more !== 'boolean') {
         throw new TrackError('Bentuk respons /v2/events tidak sesuai kontrak.', { retryable: false });
       }
@@ -108,6 +109,7 @@ export function createTrackClient(cfg = env.sync) {
     /** Cursor awal muat awal v2: diambil SEBELUM halaman snapshot pertama. */
     async startV2() {
       const json = await get('sync/v2/start');
+      if(env.billingEnabled && (json?.contract_version!==2 || !/^[0-9a-f-]{36}$/i.test(json?.source_id??''))) throw new TrackError('Kontrak billing Track tidak kompatibel.',{retryable:false});
       if (!json || !isCursor(json.after)) throw new TrackError('Bentuk respons /v2/start tidak sesuai kontrak.', { retryable: false });
       return json;
     },
@@ -140,6 +142,18 @@ export function createTrackClient(cfg = env.sync) {
     async putPaymentLock(trackPaymentId, payload, idempotencyKey) {
       if (!cfg.scheduleToken) throw new TrackError('TRACK_SCHEDULE_TOKEN belum diisi.', { retryable: false });
       return request(cfg, 'PUT', `sync/v1/payment-locks/${trackPaymentId}`, { token: cfg.scheduleToken, body: payload, idempotencyKey });
+    },
+    async putPaymentResult(trackPaymentId, payload, idempotencyKey) {
+      if (!cfg.scheduleToken) throw new TrackError('TRACK_SCHEDULE_TOKEN belum diisi.', { retryable: false });
+      return request(cfg, 'PUT', `sync/v1/payment-results/${trackPaymentId}`, { token: cfg.scheduleToken, body: payload, idempotencyKey });
+    },
+    async billingSnapshot(entity,afterId='') {
+      if(!cfg.scheduleToken) throw new TrackError('TRACK_SCHEDULE_TOKEN belum diisi.',{retryable:false});
+      const q=new URLSearchParams({limit:String(cfg.pageSize||500)});
+      if(afterId) q.set('after_id',afterId);
+      const {json}=await request(cfg,'GET',`sync/v1/billing-snapshot/${entity}?${q}`,{token:cfg.scheduleToken});
+      if(!json || !Array.isArray(json.rows) || typeof json.has_more!=='boolean') throw new TrackError('Bentuk snapshot billing tidak sesuai kontrak.',{retryable:false});
+      return json;
     },
   };
 }
