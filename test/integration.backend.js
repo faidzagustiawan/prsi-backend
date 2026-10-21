@@ -286,6 +286,69 @@ test('backend integration with real PostgreSQL', async (t) => {
         env.billingEnabled = saved.billing; env.legacyCutoverAt = saved.cutover;
       }
     });
+    await t.test('option A: SPPR finalized later allocates historical payments; reconciliation compares with opening balance', async () => {
+      const { env } = await import('../src/config/env.js');
+      const saved = env.legacyCutoverAt;
+      env.legacyCutoverAt = new Date('2026-10-21T00:00:00+07:00');
+      try {
+        const customer = randomUUID();
+        const assignment = randomUUID();
+        await sql`INSERT INTO finance.trk_customers (id, track_id, nama) VALUES (${customer}, ${randomUUID()}, 'Historical Buyer')`;
+        await sql`INSERT INTO finance.trk_assignments (id, track_id, unit_id, customer_id, tipe_pembayaran, harga, uang_muka) VALUES (${assignment}, ${randomUUID()}, ${units[1]}, ${customer}, 'cash_lunas', 1000, 100)`;
+        const [kp] = await sql`INSERT INTO finance.kode_pembantu (kode, nama, kategori, proyek_id, customer_id) VALUES ('PB-HIST-1', 'Historical Buyer', 'pembeli', ${projects[1]}, ${customer}) RETURNING id`;
+        // Customer kedua: saldo awal uang muka tanpa pembayaran historis di Track.
+        const noTrack = randomUUID();
+        await sql`INSERT INTO finance.trk_customers (id, track_id, nama) VALUES (${noTrack}, ${randomUUID()}, 'Opening Only Buyer')`;
+        const [kp2] = await sql`INSERT INTO finance.kode_pembantu (kode, nama, kategori, proyek_id, customer_id) VALUES ('PB-HIST-2', 'Opening Only Buyer', 'pembeli', ${projects[1]}, ${noTrack}) RETURNING id`;
+        await call('PUT', `/saldo-awal/${projects[1]}`, { tanggalMulai: '2026-01-01', saldo: [
+          { akunId: accounts[0], debit: 110 }, { akunId: accounts[2], kodePembantuId: kp.id, kredit: 80 },
+          { akunId: accounts[2], kodePembantuId: kp2.id, kredit: 30 },
+        ] });
+
+        const paid = randomUUID();
+        await sql`INSERT INTO finance.trk_payments (id, track_id, assignment_id, tanggal, nominal, jenis, status_verifikasi, source_created_at)
+          VALUES (${paid}, ${randomUUID()}, ${assignment}, '2025-12-01', 80, 'uang_muka', 'terverifikasi', '2025-12-01T03:00:00Z')`;
+        // Saldo awal belum dikunci: pembayaran lama proyek ini belum dipilih.
+        await call('POST', '/pembayaran-track/proses');
+        assert.equal((await sql`SELECT 1 FROM finance.status_pembayaran_si WHERE payment_id = ${paid}`).length, 0);
+        await call('POST', `/saldo-awal/${projects[1]}/kunci`);
+        await call('POST', '/pembayaran-track/proses');
+        const [st] = await sql`SELECT status_proses FROM finance.status_pembayaran_si WHERE payment_id = ${paid}`;
+        assert.equal(st.status_proses, 'historis');
+        assert.equal((await sql`SELECT 1 FROM finance.alokasi_pembayaran WHERE payment_id = ${paid}`).length, 0, 'no sale yet, nothing to allocate');
+
+        const d = await call('POST', '/dokumen', { ptId: pts[1].id, kavlingId: units[1], assignmentId: assignment, tanggalPerjanjian: '2026-10-10', hargaAwal: 1000, uangMuka: 100 }, 201);
+        await call('PUT', `/dokumen/${d.id}/jadwal`, { tanggalAcuan: 10, nominalPerBulan: 100, tanggalMulai: '2026-10-01', jatuhTempoTerakhir: '2026-10-31' });
+        assert.equal((await call('POST', `/dokumen/${d.id}/finalisasi`)).status, 'final');
+        const [bill] = await sql`SELECT j.id FROM finance.jadwal_angsuran j JOIN finance.penjualan_keuangan p ON p.id = j.penjualan_id WHERE p.assignment_id = ${assignment}`;
+        const alloc = await sql`SELECT jadwal_id, nominal::numeric AS nominal FROM finance.alokasi_pembayaran WHERE payment_id = ${paid}`;
+        assert.equal(alloc.length, 1);
+        assert.equal(alloc[0].jadwal_id, bill.id);
+        assert.equal(Number(alloc[0].nominal), 80);
+        const [queued] = await sql`SELECT payload FROM finance.outbox_track WHERE jenis = 'jadwal_angsuran' AND ref_id = ${bill.id} ORDER BY sequence DESC LIMIT 1`;
+        assert.equal(Number(queued.payload.realisasi), 80, 'bill sent to Track already carries the historical payment');
+        const tagihan = await call('GET', `/piutang/${(await sql`SELECT id FROM finance.penjualan_keuangan WHERE assignment_id = ${assignment}`)[0].id}/tagihan`);
+        assert.equal(tagihan.items[0].sisa, 20);
+
+        const ok = await call('GET', `/pembayaran-track/rekonsiliasi-historis?proyekId=${projects[1]}`);
+        assert.equal(ok.tanggalMulaiSaldoAwal, '2026-01-01');
+        const row = ok.baris.find((b) => b.customerId === customer);
+        assert.deepEqual([row.totalHistoris, row.saldoAwalDiterima, row.selisih, row.status], [80, 80, 0, 'cocok']);
+        assert.equal(row.historisPerJenis.uang_muka, 80);
+        const opening = ok.baris.find((b) => b.customerId === noTrack);
+        assert.deepEqual([opening.totalHistoris, opening.saldoAwalDiterima, opening.selisih, opening.status], [0, 30, 30, 'selisih']);
+        assert.deepEqual([ok.ringkasan.cocok, ok.ringkasan.selisih], [1, 1]);
+
+        // Proyek 0: input mundur, refund, dan historis yang berubah menunggu keputusan Keuangan.
+        const review = await call('GET', `/pembayaran-track/rekonsiliasi-historis?proyekId=${projects[0]}`);
+        const pending = review.baris.find((b) => b.namaCustomer === 'Integration Buyer');
+        assert.equal(pending.status, 'perlu_ditinjau', 'pending review is never reported as matched');
+        assert.equal(pending.perluDitinjau.jumlah, 3);
+        await call('GET', `/pembayaran-track/rekonsiliasi-historis?proyekId=${randomUUID()}`, undefined, 404);
+      } finally {
+        env.legacyCutoverAt = saved;
+      }
+    });
     await t.test('SHM status history, duplicate prevention and collateral validation', async () => {
       const input = { nomorShm: 'SHM-TEST', unitId: units[0], status: 'di_kantor', lokasi: 'Kantor' };
       const s = await call('POST', '/shm', input, 201);

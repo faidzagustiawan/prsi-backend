@@ -7,6 +7,7 @@ import { STATUS_PROSES_PEMBAYARAN } from '../../shared/constants.js';
 import * as piutang from './piutang.service.js';
 import * as pembayaran from './pembayaran.service.js';
 import * as tagihan from './tagihan.service.js';
+import { rekonsiliasiHistoris } from './rekonsiliasi-historis.service.js';
 
 const ok = (data, message = 'Success') => ({ success: true, message, data });
 const positif = nominal.refine((v) => v > 0, 'Nominal harus lebih dari 0');
@@ -71,6 +72,11 @@ export async function pembayaranTrackRoutes(fastify) {
     })],
     schema: { tags, description: 'Pembayaran dari PR Track dan status prosesnya (antrean Menunggu / Gagal validasi / Perlu ditinjau)' },
   }, async (request) => ok(await pembayaran.list(request.query)));
+
+  fastify.get('/rekonsiliasi-historis', {
+    preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema }) })],
+    schema: { tags, description: 'Cutoff Opsi A: pembayaran historis (tidak dijurnal) per customer dibandingkan saldo awal titipan/uang muka; status cocok, selisih, atau cek_piutang.' },
+  }, async (request) => ok(await rekonsiliasiHistoris(request.query.proyekId)));
 
   fastify.post('/proses', {
     preHandler: guard,

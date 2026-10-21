@@ -55,6 +55,7 @@ Semua prefix berikut `/api/v1`. Autentikasi/otorisasi lama dipertahankan.
 | SI | GET /pembayaran-track | Antrean, keputusan SI, ID tagihan, jurnal |
 | SI | POST /pembayaran-track/{id}/verifikasi | `{keputusan:terima|tolak, alasan?}`; tolak wajib alasan |
 | SI | POST /jurnal/{id}/balik | Koreksi pembayaran terjurnal tanpa menghapus riwayat |
+| SI | GET /pembayaran-track/rekonsiliasi-historis?proyekId= | Cutoff Opsi A: historis vs saldo awal per customer |
 | SI | POST /sinkron/muat-ulang | `{sourceId:uuid}` menyiapkan resnapshot terkontrol |
 | SI | POST /sinkron/kirim-ulang | Antrekan snapshot balik tagihan dan hasil pembayaran terkini |
 

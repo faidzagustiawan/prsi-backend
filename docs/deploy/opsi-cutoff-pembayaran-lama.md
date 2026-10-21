@@ -88,10 +88,15 @@ customer yang lengkap; proyek tanpa saldo awal tidak bisa diaktifkan.
 - Piutang menghitung `historis` sebagai dibayar. SPPR yang difinalkan sesudahnya
   mengalokasikan pembayaran historis assignment itu ke tagihan baru lebih dulu.
 - Invariant baru `historical_payment_with_journal` harus 0.
-- Tes: `integration.backend.js`, "option A cutoff ...". Alokasi historis saat
-  finalisasi SPPR dengan pembayaran historis yang sudah ada belum diuji khusus.
-- Belum ada laporan rekonsiliasi historis vs saldo awal kode pembantu; kueri
-  `status_proses='historis'` per penjualan dapat dipakai sementara.
+- Laporan `GET /api/v1/pembayaran-track/rekonsiliasi-historis?proyekId=` per
+  customer: total historis (per jenis) dibandingkan saldo awal titipan booking
+  fee + uang muka penjualan pada kode pembantu customer. Status `cocok`,
+  `selisih`, `perlu_ditinjau` (ada pembayaran lama yang tidak otomatis historis),
+  atau `cek_piutang` (ada saldo awal piutang; dibaca manual). Tanda tangan
+  Keuangan memakai laporan ini sebelum cutover.
+- Tes `integration.backend.js`: "option A cutoff ..." dan "option A: SPPR
+  finalized later ..." (alokasi historis saat SPPR difinalkan belakangan,
+  realisasi tagihan ke Track, serta status laporan cocok/selisih/perlu_ditinjau).
 
 ### B. Cutoff global berdasarkan waktu pencatatan
 
