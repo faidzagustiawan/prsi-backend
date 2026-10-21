@@ -367,6 +367,18 @@ test('billing integration across two isolated databases',async t=>{
     assert.deepEqual(marker.map(r=>r.rows_updated),[2]);
     await isolated`DELETE FROM payment_history WHERE id IN ${isolated([...legacy.map(r=>r.id),late.id])}`;
     await isolated`UPDATE si_billing_config SET enabled=true WHERE singleton`;
+    // Cakupan pilot: billing hanya untuk perusahaan terdaftar; perusahaan lain tetap alur lama.
+    const [{applies}]=await isolated`SELECT public.si_billing_applies(${assignment.id}::uuid) AS applies`;
+    assert.equal(applies,true,'company_ids NULL covers every company');
+    await isolated`UPDATE si_billing_config SET company_ids=ARRAY[gen_random_uuid()] WHERE singleton`;
+    assert.equal((await isolated`SELECT public.si_billing_applies(${assignment.id}::uuid) AS a`)[0].a,false);
+    const [outside]=await isolated`INSERT INTO payment_history(assignment_id,jumlah_bayar,tanggal_bayar) VALUES(${assignment.id},5,'2026-10-20') RETURNING id`;
+    assert.ok(outside.id,'assignments outside the pilot keep the legacy input');
+    await isolated`DELETE FROM payment_history WHERE id=${outside.id}`;
+    const [{company}]=await isolated`SELECT p.company_id AS company FROM property_assignments a JOIN units u ON u.id=a.unit_id JOIN clusters k ON k.id=u.cluster_id JOIN projects p ON p.id=k.project_id WHERE a.id=${assignment.id}`;
+    await isolated`UPDATE si_billing_config SET company_ids=ARRAY[${company}::uuid] WHERE singleton`;
+    await assert.rejects(isolated`INSERT INTO payment_history(assignment_id,jumlah_bayar,tanggal_bayar) VALUES(${assignment.id},5,'2026-10-20')`,/Pilih tagihan/);
+    await isolated`UPDATE si_billing_config SET company_ids=NULL WHERE singleton`;
    } finally {isolated.release();}
   });
   await t.test('dedicated integration process starts with restricted credentials and accepts only scoped writes',async()=>{
