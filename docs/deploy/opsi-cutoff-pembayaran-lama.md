@@ -28,6 +28,55 @@ beralasan tanpa jurnal (atau `perlu_ditinjau` bila sudah dijurnal) dan batch
 lanjut. Tes: `integration.backend.js`, "legacy Track payments rejected by journal
 rules do not stop the batch".
 
+## Temuan data produksi Track (inspeksi baca-saja 21 Oktober 2026)
+
+Sumber: `ops-scripts/inspect-track-readonly.mjs` di host Track. PostgreSQL 16.14,
+akun aplikasi non-admin dan pemilik ketujuh tabel sumber; belum ada objek
+sync/billing. 1.533 pembayaran: 125 auto-injeksi KPR, 7 refund negatif, 1.222
+tanpa bukti, satu bertanggal tahun 205 (salah ketik). `created_at` tertua
+2026-07-14 (data dipindah ke database baru), bukan waktu pencatatan asli.
+
+**Produksi tidak punya kolom `status_verifikasi`, `jenis`, dan
+`rekening_tujuan`.** Migrasi `sync.sql` menambahkannya dengan nilai
+`status_verifikasi='menunggu'`, `jenis` dan `rekening_tujuan` kosong untuk semua
+baris lama. Akibat pada implementasi saat ini:
+
+- Jalur legacy dan Opsi A mensyaratkan `status_verifikasi='terverifikasi'`, jadi
+  seluruh pembayaran lama akan tetap `menunggu` dan tidak pernah menjadi
+  `historis`; piutang SI menganggapnya belum dibayar.
+- Bila diverifikasi, `jenis` kosong membuat Opsi A memberi `perlu_ditinjau`.
+- Pembayaran lama bertanggal sesudah `tanggal_mulai` saldo awal akan
+  `gagal_validasi` karena rekening kosong.
+
+Keputusan pemilik 21 Oktober 2026 (ketiganya disetujui):
+
+1. Pembayaran yang sudah tercatat di Track sebelum cutover dianggap sah
+   (`terverifikasi` oleh sistem lama), atau harus diverifikasi ulang satu per satu.
+2. Aturan `jenis` untuk baris lama, mis. auto-injeksi → `pencairan_kpr`, lainnya →
+   `uang_muka`; booking fee tidak bisa dibedakan otomatis.
+3. `tanggal_mulai` saldo awal setiap proyek disamakan dengan tanggal cutover
+   (disarankan), sehingga semua pembayaran sebelum cutover masuk `historis` dan
+   tidak ada pembayaran lama tanpa rekening yang dicoba dijurnal.
+
+Implementasi:
+
+- **Backfill Track** (`staging/sync.sql`, ikut di `billing-v2-cutover.sql`), sebelum
+  trigger sync dipasang sehingga tidak membuat event outbox: baris tanpa tagihan
+  diisi `jenis` (auto-injeksi → `pencairan_kpr`, lainnya → `uang_muka`) dan yang
+  masih `menunggu` menjadi `terverifikasi` oleh "Sistem lama (sebelum cutover
+  billing SI)". Status lain (mis. `ditolak`) dan jenis yang sudah ada tidak diubah.
+  Dijalankan sekali; tabel `si_legacy_backfill` mencatat waktu dan jumlah baris,
+  sehingga mengulang SQL tidak mengesahkan pembayaran yang masuk sesudahnya.
+- **Opsi A di SI**: klasifikasi historis dilakukan sebelum syarat verifikasi,
+  `jenis` kosong dianggap `uang_muka`, dan yang `ditolak` di Track tidak menjadi
+  historis. Perlindungan ini berlaku walau backfill belum dijalankan.
+- **Butir 3** bersifat operasional: Keuangan mengisi saldo awal tiap proyek
+  dengan `tanggal_mulai` = tanggal cutover (WIB) lalu mengunci. Laporan
+  rekonsiliasi menampilkan `tanggalMulaiSamaDenganCutover`.
+- Tes: `integration.billing.js` (backfill sekali, tidak mengesahkan pengajuan
+  bertagihan maupun pembayaran sesudahnya) dan `integration.backend.js`
+  (pembayaran lama tanpa verifikasi/jenis menjadi historis, yang ditolak tidak).
+
 ## Fakta yang dipakai
 
 - Piutang menghitung "dibayar" dari `alokasi_pembayaran` yang pembayarannya

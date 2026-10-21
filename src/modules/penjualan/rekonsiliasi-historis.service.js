@@ -92,11 +92,16 @@ export async function rekonsiliasiHistoris(proyekId) {
   }).sort((a, b) => String(a.namaCustomer).localeCompare(String(b.namaCustomer)));
 
   const hitung = (status) => baris.filter((b) => b.status === status).length;
+  // Keputusan pemilik 21 Oktober 2026: tanggal mulai saldo awal = tanggal cutover (WIB),
+  // supaya semua pembayaran sebelum cutover menjadi historis.
+  const tanggalCutover = env.legacyCutoverAt?.toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }) ?? null;
   return {
     proyekId,
     tanggalMulaiSaldoAwal: periode.tanggal_mulai,
     statusSaldoAwal: periode.status,
     cutoverAt: env.legacyCutoverAt?.toISOString() ?? null,
+    tanggalCutover,
+    tanggalMulaiSamaDenganCutover: tanggalCutover === periode.tanggal_mulai,
     akunSistemLengkap: akunDiterima.length > 0,
     ringkasan: {
       customer: baris.length, cocok: hitung('cocok'), selisih: hitung('selisih'), cekPiutang: hitung('cek_piutang'),

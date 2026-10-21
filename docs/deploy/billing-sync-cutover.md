@@ -72,6 +72,13 @@ bukan prasyarat cutover.
    mengizinkan SI; tidak ada wildcard binding. Jika melalui Cloudflare, validasi
    pemulihan IP asli dari rentang Cloudflare tepercaya sebelum memakai allowlist.
    Jangan mempercayai X-Forwarded-For dari semua pengirim. Token tetap wajib.
+4a. Sebelum worker SI berjalan: Keuangan mengisi dan mengunci saldo awal setiap
+   proyek dengan `tanggal_mulai` = tanggal cutover (WIB), lalu set
+   `SI_LEGACY_CUTOVER_AT` ke waktu cutover. Migrasi Track menjalankan backfill
+   pembayaran lama sekali; periksa `public.si_legacy_backfill.rows_updated` sama
+   dengan jumlah pembayaran tanpa tagihan sebelum migrasi. Setelah bootstrap,
+   tanda tangani `GET /api/v1/pembayaran-track/rekonsiliasi-historis` per proyek
+   ([opsi cutoff](opsi-cutoff-pembayaran-lama.md)).
 5. Pindah sumber SI melalui POST `/api/v1/sinkron/muat-ulang` dengan sourceId yang
    dikonfirmasi. Muat ulang tidak menghapus jurnal atau UUID lokal. Selesaikan
    rekonsiliasi ke sumber produksi; review `perlu_ditinjau` untuk data historis

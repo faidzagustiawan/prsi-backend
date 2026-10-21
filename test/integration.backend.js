@@ -275,6 +275,19 @@ test('backend integration with real PostgreSQL', async (t) => {
         assert.match((await status(backdated)).alasan, /sesudah cutover/);
         assert.equal((await status(refund)).status_proses, 'perlu_ditinjau');
 
+        // Data produksi: pembayaran lama tanpa status verifikasi dan tanpa jenis tetap historis;
+        // yang ditolak di Track tidak ikut.
+        const unverified = randomUUID();
+        const rejected = randomUUID();
+        await sql`INSERT INTO finance.trk_payments (id, track_id, assignment_id, tanggal, nominal, jenis, status_verifikasi, source_created_at)
+          VALUES (${unverified}, ${randomUUID()}, ${assignment}, '2025-11-04', 15, NULL, 'menunggu', '2026-07-14T04:04:04Z'),
+                 (${rejected}, ${randomUUID()}, ${assignment}, '2025-11-05', 25, 'uang_muka', 'ditolak', '2026-07-14T04:04:04Z')`;
+        await call('POST', '/pembayaran-track/proses');
+        assert.equal((await status(unverified)).status_proses, 'historis');
+        const [{ total: unverifiedAlloc }] = await sql`SELECT coalesce(sum(nominal), 0)::numeric AS total FROM finance.alokasi_pembayaran WHERE payment_id = ${unverified} AND jadwal_id IS NOT NULL`;
+        assert.equal(Number(unverifiedAlloc), 15, 'missing kind is treated as down payment and allocated to the schedule');
+        assert.equal((await status(rejected)).status_proses, 'menunggu');
+
         // Unchanged rows are not reprocessed; a change in Track after the cutoff is flagged.
         assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0);
         await sql`UPDATE finance.trk_payments SET nominal = 60, synced_at = now() + interval '1 second' WHERE id = ${held}`;
@@ -332,6 +345,8 @@ test('backend integration with real PostgreSQL', async (t) => {
 
         const ok = await call('GET', `/pembayaran-track/rekonsiliasi-historis?proyekId=${projects[1]}`);
         assert.equal(ok.tanggalMulaiSaldoAwal, '2026-01-01');
+        assert.equal(ok.tanggalCutover, '2026-10-21');
+        assert.equal(ok.tanggalMulaiSamaDenganCutover, false, 'report flags opening balance not aligned with cutover');
         const row = ok.baris.find((b) => b.customerId === customer);
         assert.deepEqual([row.totalHistoris, row.saldoAwalDiterima, row.selisih, row.status], [80, 80, 0, 'cocok']);
         assert.equal(row.historisPerJenis.uang_muka, 80);

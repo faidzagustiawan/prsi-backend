@@ -348,6 +348,25 @@ test('billing integration across two isolated databases',async t=>{
     for(let i=0;i<2;i++) await isolated.unsafe(sql);
     assert.equal((await client.startV2()).source_id,sourceId);
     assert.equal((await isolated`SELECT count(*)::int n FROM payment_history`)[0].n,3);
+    // Backfill pembayaran lama (keputusan 21 Okt 2026): hanya sekali, hanya baris sebelum penanda.
+    await isolated`DELETE FROM public.si_legacy_backfill`;
+    await isolated`UPDATE si_billing_config SET enabled=false WHERE singleton`;
+    const legacy=await isolated`INSERT INTO payment_history(assignment_id,jumlah_bayar,tanggal_bayar,is_auto_inject)
+      VALUES(${assignment.id},10,'2025-01-02',false),(${assignment.id},20,'2025-01-03',true) RETURNING id`;
+    await isolated.unsafe(sql);
+    const filled=await isolated`SELECT jenis,status_verifikasi,diverifikasi_oleh FROM payment_history WHERE id IN ${isolated(legacy.map(r=>r.id))} ORDER BY jumlah_bayar`;
+    assert.deepEqual(filled.map(r=>[r.jenis,r.status_verifikasi]),[['uang_muka','terverifikasi'],['pencairan_kpr','terverifikasi']]);
+    assert.match(filled[0].diverifikasi_oleh,/Sistem lama/);
+    const billed=await isolated`SELECT count(*)::int n FROM payment_history WHERE si_jadwal_id IS NOT NULL AND diverifikasi_oleh LIKE 'Sistem lama%'`;
+    assert.equal(billed[0].n,0,'bill-linked submissions are never auto-verified');
+    const [late]=await isolated`INSERT INTO payment_history(assignment_id,jumlah_bayar,tanggal_bayar) VALUES(${assignment.id},30,'2025-01-04') RETURNING id`;
+    await isolated.unsafe(sql);
+    const [after]=await isolated`SELECT jenis,status_verifikasi FROM payment_history WHERE id=${late.id}`;
+    assert.deepEqual([after.jenis,after.status_verifikasi],[null,'menunggu'],'rerunning cutover SQL does not validate later payments');
+    const marker=await isolated`SELECT rows_updated FROM public.si_legacy_backfill`;
+    assert.deepEqual(marker.map(r=>r.rows_updated),[2]);
+    await isolated`DELETE FROM payment_history WHERE id IN ${isolated([...legacy.map(r=>r.id),late.id])}`;
+    await isolated`UPDATE si_billing_config SET enabled=true WHERE singleton`;
    } finally {isolated.release();}
   });
   await t.test('dedicated integration process starts with restricted credentials and accepts only scoped writes',async()=>{

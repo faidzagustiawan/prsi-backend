@@ -59,10 +59,16 @@ const legacyHeld = () => env.billingEnabled && !env.legacyCutoverAt;
 const ditahan = (message) => Object.assign(new AppError(message, 409), { hold: true });
 export const PENANDA_SALDO_AWAL = 'SALDO-AWAL';
 
+// Produksi Track tidak menyimpan jenis untuk pembayaran lama (keputusan pemilik 21 Oktober
+// 2026: lainnya dianggap uang muka; auto-injeksi KPR sudah dikecualikan lebih awal).
+const jenisPembayaran = (p) => p.jenis ?? 'uang_muka';
+
 /**
  * Opsi A: pembayaran tanpa tagihan yang bertanggal sebelum tanggal mulai saldo awal
  * proyek sudah terwakili saldo awal customer. Dialokasikan ke tagihan supaya sisa
- * tagihan benar, tetapi tidak dijurnal. Mengembalikan null bila pembayaran diproses
+ * tagihan benar, tetapi tidak dijurnal. Pembayaran yang tercatat sebelum cutover
+ * dianggap sah walau belum berstatus terverifikasi (keputusan pemilik 21 Oktober
+ * 2026), kecuali ditolak di Track. Mengembalikan null bila pembayaran diproses
  * jalur legacy biasa.
  */
 async function klasifikasiPembayaranLama(tx, actor, p) {
@@ -74,12 +80,13 @@ async function klasifikasiPembayaranLama(tx, actor, p) {
   const saldoAwal = await jurnalRepo.findSaldoAwalPeriode(unit.projectId, tx);
   if (saldoAwal?.status !== 'terkunci') throw ditahan('Pembayaran tanpa tagihan ditahan: saldo awal proyek belum dikunci.');
   if (p.tanggal >= saldoAwal.tanggalMulai) return null;
+  if (p.statusVerifikasi === 'ditolak') return null;
   if (p.sourceCreatedAt && p.sourceCreatedAt >= env.legacyCutoverAt) {
     return setStatus(tx, p.id, 'perlu_ditinjau', {
       alasan: `Dicatat di PR Track sesudah cutover dengan tanggal ${p.tanggal}, sebelum saldo awal proyek (${saldoAwal.tanggalMulai}). Pastikan belum termasuk saldo awal.`,
     });
   }
-  if (!(toCents(p.nominal) > 0n) || !JENIS_PEMBAYARAN.includes(p.jenis)) {
+  if (!(toCents(p.nominal) > 0n) || !JENIS_PEMBAYARAN.includes(jenisPembayaran(p))) {
     return setStatus(tx, p.id, 'perlu_ditinjau', {
       alasan: 'Pembayaran lama dengan nominal atau jenis tidak lazim (mis. pengembalian dana); tangani manual terhadap saldo awal.',
     });
@@ -257,10 +264,11 @@ export async function prosesPembayaranTx(tx, actor, paymentId) {
       return setStatus(tx,p.id,'perlu_ditinjau',{alasan:'Isi pembayaran berubah setelah diverifikasi.'});
     }
     await validateSelectedBill(tx,p);
-  } else if (p.statusVerifikasi !== 'terverifikasi') return setStatus(tx, p.id, 'menunggu', { alasan: 'Belum diverifikasi admin PR Track.' });
-  else {
+  } else {
+    // Cutoff diputuskan sebelum syarat verifikasi: pembayaran lama tidak punya status verifikasi.
     const lama = await klasifikasiPembayaranLama(tx, actor, p);
     if (lama) return lama;
+    if (p.statusVerifikasi !== 'terverifikasi') return setStatus(tx, p.id, 'menunggu', { alasan: 'Belum diverifikasi admin PR Track.' });
   }
 
   const berat = [];
@@ -328,7 +336,7 @@ export async function alokasikan(tx, actor, p) {
   await tx.delete(alokasiPembayaran).where(and(eq(alokasiPembayaran.paymentId, p.id), eq(alokasiPembayaran.manual, false)));
   let sisa = toCents(p.nominal);
   const rows = [];
-  if (['uang_muka', 'angsuran'].includes(p.jenis)) {
+  if (['uang_muka', 'angsuran'].includes(jenisPembayaran(p))) {
     const jadwal = await tx.select().from(jadwalAngsuran)
       .where(and(eq(jadwalAngsuran.penjualanId, pj.id), eq(jadwalAngsuran.aktif, true))).orderBy(asc(jadwalAngsuran.tanggal), asc(jadwalAngsuran.noUrut));
     const terpakai = jadwal.length
