@@ -157,3 +157,40 @@ generator OpenAPI. Pasang dependency VPS dengan npm ci --omit=dev.
 
 Frontend yang sempat dipasang dilepas atas instruksi pemilik. /login dan
 asset frontend harus mengembalikan 404; tidak ada penyajian SPA di VPS.
+
+## Cutover billing sync tahap 1, 21–22 Oktober 2026 (diam, semua gate mati)
+
+Persetujuan pemilik: cutover Track disetujui 21 Oktober 2026. Urutan dan skrip ada di
+`D:\PodoRukun\ops-scripts` (tidak di-commit); runbook di `billing-sync-cutover.md`.
+
+**Track (VPS 43.173.8.59, DB Sumobase PostgreSQL 16.14)**
+- Kode `main` `dcb5239` (deploy otomatis GitHub Actions). Server bisnis tetap memakai jalur lama.
+- Backup penuh: workflow "Database Daily Backup" (pg_dump ke R2) sebelum migrasi.
+- `billing-v2-cutover.sql` diterapkan (221 ms, satu transaksi). Backfill pembayaran lama:
+  1.533 baris menjadi `terverifikasi`; jenis 1.408 `uang_muka`, 125 `pencairan_kpr`.
+  Jumlah/nominal pembayaran dan `total_dibayar` tidak berubah. Penanda: `public.si_legacy_backfill`.
+- `TRACK_SYNC_SOURCE_ID` = `40069543-2a99-4766-853c-7e34ab1967d3`.
+- Listener `prtrack-integration.service` (mode application, 127.0.0.1:3202), env root-only
+  `/etc/prtrack-integration/runtime.env`, `SYNC_WRITE_ENABLED=false`.
+- Pooler Sumobase (6432 dan 6433) mengabaikan parameter startup koneksi; listener sekarang
+  memasang read-only dan timeout per transaksi (`dcb5239`).
+- `https://sync.podorukuntrack.com` (Cloudflare DNS only, Let's Encrypt): hanya `/sync/`, hanya
+  dari 43.173.11.71; token tetap wajib. Dari VPS SI tanpa token: 401; dari luar: 403.
+
+**SI (VPS 43.173.11.71)**
+- Rilis `main` `51e7575` di `/opt/podorukun-si/app` (env `app/.env`, unit tanpa EnvironmentFile).
+- Produksi ternyata sudah berada di migrasi 0008; hanya `0009_billing_sync` yang diterapkan
+  (10 migrasi tercatat). Gate `SYNC_ENABLED`, `SYNC_WRITE_ENABLED`, `SI_BILLING_ENABLED` false.
+- Backup: `/var/backups/podorukun-si/pre-billing-dark-20261021T183446Z` (app, .env, unit, dump finance).
+- Rilis lama: `/opt/podorukun-si/app.prev-20261021T183446Z` (kompatibel dengan schema baru;
+  0009 aditif).
+
+**Insiden rollback ganda.** Perintah rollback dijalankan dua kali berturut-turut. Karena
+`app.failed` sudah ada, `mv app app.failed` kedua memindahkan rilis aktif ke dalam
+`app.failed/app`, sehingga `/opt/podorukun-si/app` hilang sementara (API tetap melayani
+karena proses tidak di-restart). Dipulihkan dengan memindahkan folder kembali, lalu rilis
+baru dipasang lagi; `/health` 200. Pelajaran: perintah rollback tidak idempoten; jalankan
+sekali dan periksa `ls /opt/podorukun-si` sebelum mengulang.
+
+**Belum dilakukan:** konfigurasi token/URL sync SI, saldo awal per proyek dan
+`SI_LEGACY_CUTOVER_AT`, bootstrap, rekonsiliasi, UAT, dan aktivasi gate.
