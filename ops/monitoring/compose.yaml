@@ -58,7 +58,7 @@ services:
     read_only: true
     command: [node, /app/server.mjs]
     environment:
-      TRACK_CHECKSUM_URL: http://10.11.26.196:3201/sync/v2/checksum
+      TRACK_CHECKSUM_URL: http://10.11.26.196:9443/track-checksum
       PRSI_CHECKSUM_URL: http://10.11.26.196:9443/internal/checksum
     volumes: ['./checker:/app:ro', '/etc/prsi-monitoring/secrets:/run/secrets:ro', 'checker-state:/state']
   ntfy:
@@ -71,7 +71,7 @@ services:
     <<: *base
     image: caddy:2.10.2
     mem_limit: 96m
-    volumes: ['./Caddyfile:/etc/caddy/Caddyfile:ro', 'caddy-data:/data', 'caddy-config:/config']
+    volumes: ['./Caddyfile:/etc/caddy/Caddyfile:ro', '/opt/ai-stack/www:/srv/www:ro', 'caddy-data:/data', 'caddy-config:/config']
 volumes:
   checker-state:
   prometheus:

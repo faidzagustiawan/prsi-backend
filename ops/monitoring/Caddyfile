@@ -1,9 +1,53 @@
 {
   admin 127.0.0.1:2019
 }
+
+(ops_auth) {
+  basic_auth {
+    faidz <BCRYPT_HASH_ON_SERVER>
+  }
+}
+
+(no_index) {
+  header X-Robots-Tag "noindex, nofollow"
+}
+
 monitor.faidz.fun {
   reverse_proxy 127.0.0.1:3000
 }
+
 ntfy.faidz.fun {
   reverse_proxy 127.0.0.1:8085
+}
+
+9router.faidz.fun {
+  reverse_proxy 127.0.0.1:20128
+}
+
+hermes.faidz.fun {
+  import ops_auth
+  reverse_proxy 127.0.0.1:9119 {
+    header_up Host 127.0.0.1:9119
+  }
+}
+
+
+status.faidz.fun {
+  import ops_auth
+  import no_index
+  root * /srv/www
+  rewrite / /status.html
+  file_server
+}
+
+prometheus.faidz.fun {
+  import ops_auth
+  import no_index
+  reverse_proxy 127.0.0.1:9090
+}
+
+alerts.faidz.fun {
+  import ops_auth
+  import no_index
+  reverse_proxy 127.0.0.1:9093
 }
