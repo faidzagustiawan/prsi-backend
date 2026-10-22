@@ -12,6 +12,7 @@ const pick = (set, value) => (set.has(value) ? value : 'lain');
 
 export function createCollector(client, { now = () => Date.now(), backupFile = process.env.PRSI_BACKUP_TIMESTAMP_FILE } = {}) {
   let snapshot = null, successAt = null, successful = false, running = null;
+  let worker = null, workerSuccessful = false;
   async function collect() {
     try {
       const next = await client.begin('isolation level repeatable read read only', async (tx) => {
@@ -23,16 +24,7 @@ export function createCollector(client, { now = () => Date.now(), backupFile = p
           (SELECT count(*)::int FROM finance.outbox_track WHERE status='gagal') AS outbox,
           (SELECT extract(epoch FROM gap_since)::double precision FROM finance.sync_cursor WHERE id='global') AS held_since,
           (SELECT extract(epoch FROM max(selesai))::double precision FROM finance.sync_log WHERE arah='tarik' AND status='sukses') AS cycle_at`;
-        // Worker counters come from finance.sync_log, which the worker writes every
-        // cycle. Sums over the whole table behave as Prometheus counters.
-        const syncLog = await tx`SELECT arah, status, count(*)::int AS cycles,
-          coalesce(sum(jml_baru),0)::bigint AS baru, coalesce(sum(jml_ubah),0)::bigint AS ubah, coalesce(sum(jml_gagal),0)::bigint AS gagal,
-          extract(epoch FROM max(selesai))::double precision AS last_at
-          FROM finance.sync_log GROUP BY arah, status`;
-        const payments = await tx`SELECT coalesce(s.status_proses,'belum_diproses') AS status, count(*)::int AS count
-          FROM finance.trk_payments p LEFT JOIN finance.status_pembayaran_si s ON s.payment_id = p.id GROUP BY 1`;
-        const outboxItems = await tx`SELECT status, count(*)::int AS count FROM finance.outbox_track GROUP BY status`;
-        return { invariants, ...state, syncLog, payments, outboxItems };
+        return { invariants, ...state };
       });
       next.backupAt = null;
       if (backupFile) {
@@ -48,6 +40,30 @@ export function createCollector(client, { now = () => Date.now(), backupFile = p
       // SQL errors can contain raw payloads; do not log them or return them.
       successful = false;
     }
+    await collectWorker();
+  }
+  // Worker metrics use their own transaction: a failure here (permissions, timeout)
+  // must never take down the integrity/backup metrics above.
+  async function collectWorker() {
+    try {
+      worker = await client.begin('isolation level read committed read only', async (tx) => {
+        await tx`SET LOCAL statement_timeout = '10s'`;
+        // Sums over finance.sync_log (written every worker cycle) behave as counters.
+        const syncLog = await tx`SELECT arah, status, count(*)::int AS cycles,
+          coalesce(sum(jml_baru),0)::bigint AS baru, coalesce(sum(jml_ubah),0)::bigint AS ubah, coalesce(sum(jml_gagal),0)::bigint AS gagal,
+          extract(epoch FROM max(selesai))::double precision AS last_at
+          FROM finance.sync_log GROUP BY arah, status`;
+        const payments = await tx`SELECT coalesce(s.status_proses,'belum_diproses') AS status, count(*)::int AS count
+          FROM finance.trk_payments p LEFT JOIN finance.status_pembayaran_si s ON s.payment_id = p.id GROUP BY 1`;
+        const outboxItems = await tx`SELECT status, count(*)::int AS count FROM finance.outbox_track GROUP BY status`;
+        return { syncLog, payments, outboxItems };
+      });
+      workerSuccessful = true;
+    } catch {
+      // Stale counters are worse than none: drop them and report the failure.
+      worker = null;
+      workerSuccessful = false;
+    }
   }
   return {
     refresh() {
@@ -57,7 +73,9 @@ export function createCollector(client, { now = () => Date.now(), backupFile = p
     render() {
       const time = now() / 1000;
       let output = gauge('monitor_collection_success', Number(successful))
-        + gauge('monitor_collection_age_seconds', successAt === null ? null : time - successAt);
+        + gauge('monitor_collection_age_seconds', successAt === null ? null : time - successAt)
+        + gauge('monitor_worker_collection_success', Number(workerSuccessful));
+      if (worker) output += workerMetrics(worker);
       if (!snapshot) return output;
       for (const [name, count] of Object.entries(snapshot.invariants)) output += gauge('accounting_invariant_violations', count, `{invariant="${name}"}`);
       output += gauge('sync_error_unresolved', snapshot.errors) + gauge('outbox_failed', snapshot.outbox)
@@ -65,7 +83,6 @@ export function createCollector(client, { now = () => Date.now(), backupFile = p
         + gauge('sync_last_cycle_age_seconds', snapshot.cycle_at === null ? null : Math.max(0, time - snapshot.cycle_at))
         + gauge('backup_last_age_seconds', snapshot.backupAt === null ? null : time - snapshot.backupAt)
         + gauge('backup_timestamp_available', Number(snapshot.backupAt !== null));
-      output += workerMetrics(snapshot);
       // Local cursor age cannot measure source lag. The independent checker owns
       // lag and mismatch metrics once the source checksum contract is available.
       output += gauge('sync_cursor_lag_seconds', null);

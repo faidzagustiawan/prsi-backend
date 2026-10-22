@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import Fastify from 'fastify';
 import { apiMetrics, labels } from '../src/monitoring/metrics.js';
 import { createCollector, workerMetrics } from '../src/monitoring/collector.js';
@@ -61,10 +61,43 @@ describe('worker metrics from collector snapshot', () => {
     expect(out).not.toContain('aneh');
     expect(out).not.toContain('<script>');
   });
+  const main = { invariants: { journal_unbalanced: 0 }, errors: 0, outbox: 0, held_since: null, cycle_at: 1 };
+  const workerData = { syncLog, payments: [], outboxItems: [] };
+  const opts = { now: () => 3_000_000, backupFile: undefined };
   it('is included in collector output after a successful collection', async () => {
-    const snapshot = { invariants: {}, errors: 0, outbox: 0, held_since: null, cycle_at: 1, syncLog, payments: [], outboxItems: [] };
-    const collector = createCollector({ begin: async () => snapshot }, { now: () => 3_000_000, backupFile: undefined });
+    const begin = vi.fn().mockResolvedValueOnce(main).mockResolvedValueOnce(workerData);
+    const collector = createCollector({ begin }, opts);
     await collector.refresh();
-    expect(collector.render()).toContain('sync_cycles_total{direction="push",status="sukses"} 9\n');
+    const out = collector.render();
+    expect(out).toContain('monitor_collection_success 1\n');
+    expect(out).toContain('monitor_worker_collection_success 1\n');
+    expect(out).toContain('sync_cycles_total{direction="push",status="sukses"} 9\n');
+  });
+  it('keeps integrity metrics when worker queries fail', async () => {
+    const begin = vi.fn().mockResolvedValueOnce(main).mockRejectedValueOnce(new Error('PRIVATE_PAYLOAD permission denied'));
+    const collector = createCollector({ begin }, opts);
+    await collector.refresh();
+    const out = collector.render();
+    expect(out).toContain('monitor_collection_success 1\n');
+    expect(out).toContain('accounting_invariant_violations{invariant="journal_unbalanced"} 0\n');
+    expect(out).toContain('monitor_worker_collection_success 0\n');
+    expect(out).not.toContain('sync_cycles_total');
+    expect(out).not.toContain('PRIVATE_PAYLOAD');
+  });
+  it('drops stale worker counters after a later worker failure', async () => {
+    const begin = vi.fn().mockResolvedValueOnce(main).mockResolvedValueOnce(workerData)
+      .mockResolvedValueOnce(main).mockRejectedValueOnce(new Error('timeout'));
+    const collector = createCollector({ begin }, opts);
+    await collector.refresh();
+    await collector.refresh();
+    expect(collector.render()).not.toContain('sync_cycles_total');
+  });
+  it('still renders worker metrics when the main collection fails', async () => {
+    const begin = vi.fn().mockRejectedValueOnce(new Error('x')).mockResolvedValueOnce(workerData);
+    const collector = createCollector({ begin }, opts);
+    await collector.refresh();
+    const out = collector.render();
+    expect(out).toContain('monitor_collection_success 0\n');
+    expect(out).toContain('sync_cycles_total{direction="pull",status="sukses"} 10\n');
   });
 });
