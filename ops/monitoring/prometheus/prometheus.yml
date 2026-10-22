@@ -15,7 +15,12 @@ scrape_configs:
       - targets: ['10.11.26.196:9443']
   - job_name: node
     static_configs:
-      - targets: ['127.0.0.1:9100', '10.11.26.196:9100']
+      - targets: ['127.0.0.1:9100']
+        labels: {application: monitoring, public_ip: '43.157.230.218', private_ip: '10.11.20.216', environment: production}
+      - targets: ['10.11.26.196:9100']
+        labels: {application: PRSI, public_ip: '43.173.11.71', private_ip: '10.11.26.196', environment: production}
+      - targets: ['127.0.0.1:9101']
+        labels: {application: Track, public_ip: '43.173.8.59', private_ip: '10.11.25.189', environment: production}
   - job_name: sync-checker
     static_configs:
       - targets: ['127.0.0.1:9199']
@@ -26,7 +31,12 @@ scrape_configs:
     metrics_path: /probe
     params: {module: [http_ok]}
     static_configs:
-      - targets: ['https://podorukunsi.my.id/health', 'http://10.11.26.196:3201/health']
+      - targets: ['https://podorukunsi.my.id/health']
+        labels: {application: PRSI, public_ip: '43.173.11.71', environment: production}
+      - targets: ['http://10.11.26.196:3201/health']
+        labels: {application: Track, public_ip: '43.173.11.71', environment: staging}
+      - targets: ['https://api.podorukuntrack.com/health']
+        labels: {application: Track, public_ip: '43.173.8.59', environment: production}
     relabel_configs:
       - {source_labels: [__address__], target_label: __param_target}
       - {source_labels: [__param_target], target_label: instance}
