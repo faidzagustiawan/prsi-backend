@@ -50,6 +50,7 @@ export default async function akunSistemRoutes(fastify) {
       if (!a || !a.aktif) throw new AppError('Akun tidak ditemukan atau nonaktif.', 422);
       const [child] = await tx.select({ id: akun.id }).from(akun).where(eq(akun.indukId, a.id)).limit(1);
       if (child) throw new AppError('Pilih akun daun untuk jurnal otomatis.', 422);
+      if (kunci === 'kas_penerimaan_track' && !a.isKasBank) throw new AppError('Peran ini harus memakai akun kas/bank.', 422);
       await tx.insert(akunSistem).values({ kunci, akunId: a.id })
         .onConflictDoUpdate({ target: akunSistem.kunci, set: { akunId: a.id, updatedAt: new Date() } });
       await recordAuditTx(tx, { ...actor, action: AuditAction.UPDATE, entity: 'akun_sistem', entityId: null, field: kunci, summary: `${kunci} -> ${a.kode}` });

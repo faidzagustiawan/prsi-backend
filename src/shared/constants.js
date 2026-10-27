@@ -49,4 +49,5 @@ export const AKUN_SISTEM = {
   hutang_pengembalian: 'Hutang pengembalian',
   beban_cashback_kpr: 'Beban cashback KPR',
   beban_admin_kpr: 'Beban admin KPR',
+  kas_penerimaan_track: 'Kas/bank penerimaan PR Track (tanpa rekening tujuan)',
 };
