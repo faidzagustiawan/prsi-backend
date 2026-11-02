@@ -1,3 +1,4 @@
+import { errorBody } from '../shared/utils/errorHandler.js';
 import { ACCESS_COOKIE, REFRESH_COOKIE } from '../plugins/auth.js';
 
 // Cookie adalah kredensial ambient. Bearer/body token harus disediakan klien.
@@ -13,7 +14,12 @@ export function csrfGuard(allowedOrigins) {
       try { origin = new URL(request.headers.referer).origin; } catch { /* reject below */ }
     }
     if (!origin || !allowedOrigins.includes(origin)) {
-      return reply.code(403).send({ success: false, message: 'Origin request cookie tidak diizinkan.', errors: [] });
+      return reply.code(403).send(errorBody(
+        request,
+        403,
+        `Permintaan ditolak: origin '${origin ?? 'tidak diketahui'}' tidak diizinkan memakai sesi cookie. Muat ulang aplikasi dari alamat resmi.`,
+        { code: 'CSRF_REJECTED' },
+      ));
     }
   };
 }

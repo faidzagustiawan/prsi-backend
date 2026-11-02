@@ -100,8 +100,15 @@ mencoba produksi. Tidak ada proxy pihak ketiga.
   memakai validator PATCH. PUT mengikuti body lengkap pada endpoint terkait.
 
 Respons sukses umumnya `{ success: true, message, data, meta? }`.
-Respons gagal `{ success: false, message, errors }`. Item errors dapat berupa
-string **atau** `{ field, message }` untuk validasi Zod; jangan mengasumsikan satu bentuk.
+Respons gagal `{ success: false, message, code, errors, requestId }`:
+
+- `message`: kalimat utama Bahasa Indonesia, aman ditampilkan langsung ke pengguna.
+- `code`: kode mesin stabil (`VALIDATION`, `DUPLICATE`, `IN_USE`, `REFERENCE_NOT_FOUND`,
+  `FORBIDDEN`, `UNAUTHORIZED`, `SESSION_EXPIRED`, `RATE_LIMITED`, `DB_UNAVAILABLE`,
+  `ROUTE_NOT_FOUND`, `INTERNAL_ERROR`, ...). Cabangkan logika pada `code`, bukan teks `message`.
+- `errors`: selalu array objek `{ field?, message }` (rincian per kolom/aturan; boleh kosong).
+- `requestId`: kode referensi log server, juga di header `X-Request-Id`. Tampilkan
+  ke pengguna pada galat 5xx supaya laporan bisa dilacak.
 Health dan unduhan berkas memakai bentuk respons tersendiri.
 
 Skema request diambil dari validator aktual, termasuk input sebelum transformasi.

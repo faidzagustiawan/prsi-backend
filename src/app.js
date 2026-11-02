@@ -5,6 +5,7 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyMultipart from '@fastify/multipart';
+import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 
 import { env } from './config/env.js';
@@ -18,7 +19,8 @@ import { csrfGuard } from './middleware/csrf.js';
 import validatorPlugin from './plugins/validator.js';
 import swaggerPlugin from './plugins/swagger.js';
 import redisPlugin from './plugins/redis.js';
-import { globalErrorHandler } from './shared/utils/errorHandler.js';
+import { globalErrorHandler, notFoundHandler } from './shared/utils/errorHandler.js';
+import './shared/utils/zod.js'; // memasang pesan galat zod Bahasa Indonesia
 import { getRedisClient } from './shared/utils/redis.js';
 
 import authRoutes from './modules/auth/auth.routes.js';
@@ -44,10 +46,18 @@ import { piutangRoutes, pembayaranTrackRoutes } from './modules/penjualan/piutan
 import sinkronRoutes from './modules/sinkron/sinkron.routes.js';
 import { LAMPIRAN_MAKS_BYTES } from './shared/constants.js';
 
+const REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,64}$/;
+
 export async function buildApp({ logger = true, documentationOnly = false } = {}) {
   const app = Fastify({
     bodyLimit: 5 * 1024 * 1024,
     trustProxy: true,
+    // ID unik per request: dikirim balik di header + body galat supaya pengguna bisa melapor dan log mudah dicari.
+    requestIdHeader: 'x-request-id',
+    genReqId: (req) => {
+      const incoming = req.headers['x-request-id'];
+      return typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming) ? incoming : randomUUID();
+    },
     logger: logger && (env.isDevelopment ? {
       transport: {
         target: 'pino-pretty',
@@ -71,8 +81,10 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
     // Guard CSRF tetap memeriksa origin untuk mutasi yang hanya memakai cookie.
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id', 'Retry-After'],
   });
+  app.addHook('onRequest', async (request, reply) => { reply.header('x-request-id', request.id); });
 
   await app.register(fastifyCookie, { secret: env.cookieSecret, hook: 'onRequest' });
   app.addHook('preValidation', csrfGuard([...env.frontendUrls, new URL(env.apiUrl).origin]));
@@ -107,9 +119,14 @@ export async function buildApp({ logger = true, documentationOnly = false } = {}
     timeWindow: '1 minute',
     redis: getRedisClient(),
     nameSpace: 'ratelimit:',
+    errorResponseBuilder: (_request, context) => ({
+      statusCode: context.statusCode,
+      message: `Terlalu banyak permintaan. Coba lagi dalam ${Math.max(1, Math.ceil(context.ttl / 1000))} detik.`,
+    }),
   });
 
   app.setErrorHandler(globalErrorHandler);
+  app.setNotFoundHandler(notFoundHandler);
 
   const metrics = apiMetrics(app);
   await app.register(monitoringRoutes, {

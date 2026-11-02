@@ -78,11 +78,14 @@ export function transformRoute({ schema = {}, url, route }) {
 const errorSchema = {
   type: 'object', required: ['success', 'message', 'errors'],
   properties: {
-    success: { type: 'boolean', enum: [false] }, message: { type: 'string' },
-    errors: { type: 'array', items: { oneOf: [
-      { type: 'string' },
-      { type: 'object', properties: { field: { type: 'string' }, message: { type: 'string' } }, required: ['field', 'message'] },
-    ] } },
+    success: { type: 'boolean', enum: [false] },
+    message: { type: 'string', description: 'Kalimat utama yang aman ditampilkan ke pengguna.' },
+    code: { type: 'string', description: 'Kode mesin stabil, mis. VALIDATION, DUPLICATE, IN_USE, FORBIDDEN, SESSION_EXPIRED, RATE_LIMITED, INTERNAL_ERROR.' },
+    errors: { type: 'array', items: {
+      type: 'object', required: ['message'],
+      properties: { field: { type: 'string', description: 'Jalur kolom bila galat terkait kolom tertentu.' }, message: { type: 'string' } },
+    } },
+    requestId: { type: 'string', description: 'Kode referensi log server; juga dikirim di header X-Request-Id.' },
   },
 };
 const successSchema = {
@@ -99,11 +102,11 @@ const jsonResponse = (description, schema, example) => ({
 });
 const ref = (name) => ({ $ref: `#/components/schemas/${name}` });
 const errorMessages = {
-  400: 'Input tidak valid, duplikasi, atau referensi data tidak valid.',
+  400: 'Input tidak valid atau format data salah.',
   401: 'Sesi tidak ada/kedaluwarsa; coba refresh sekali.',
   403: 'Role tidak diizinkan atau origin ditolak oleh CORS.',
   404: 'Entitas yang diminta tidak ditemukan.',
-  409: 'Konflik state atau integrasi.',
+  409: 'Konflik state/integrasi, data duplikat (DUPLICATE), atau data masih dipakai (IN_USE).',
   422: 'Aturan bisnis tidak terpenuhi; baca message dan errors.',
   429: 'Rate limit atau throttle login; tunggu sebelum mencoba lagi.',
   500: 'Kesalahan internal; detail sensitif tidak dikirim ke klien.',

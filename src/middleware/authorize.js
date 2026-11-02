@@ -1,13 +1,17 @@
 // src/middleware/authorize.js
+import { errorBody } from '../shared/utils/errorHandler.js';
+
 export function authorize(...roles) {
   const handler = async (request, reply) => {
     // request.user di-inject oleh @fastify/jwt setelah lolos 'authenticate'
     if (!request.user || !roles.includes(request.user.role)) {
-      return reply.code(403).send({
-        success: false,
-        message: 'Forbidden: Insufficient privileges',
-        errors: [],
-      });
+      const peran = request.user?.role ? `'${request.user.role}'` : 'Anda';
+      return reply.code(403).send(errorBody(
+        request,
+        403,
+        `Akses ditolak: peran ${peran} tidak berhak melakukan tindakan ini (perlu peran: ${roles.join(', ')}).`,
+        { code: 'FORBIDDEN' },
+      ));
     }
   };
   handler.allowedRoles = roles;

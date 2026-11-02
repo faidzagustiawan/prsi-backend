@@ -2,6 +2,18 @@
 // Potongan skema zod yang dipakai banyak modul.
 import { z } from 'zod';
 
+// Pesan bawaan zod (untuk skema tanpa pesan khusus) dalam Bahasa Indonesia.
+// Pesan khusus di skema tetap diutamakan.
+const TIPE = { string: 'teks', number: 'angka', int: 'bilangan bulat', boolean: 'ya/tidak', array: 'daftar', object: 'objek', date: 'tanggal' };
+z.config(z.locales.id());
+z.config({
+  customError: (issue) => {
+    if (issue.code !== 'invalid_type') return undefined;
+    if (issue.input === undefined || issue.input === null) return 'Wajib diisi.';
+    return `Harus berupa ${TIPE[issue.expected] ?? issue.expected}.`;
+  },
+});
+
 export const uuidSchema = z.uuid('ID tidak valid');
 
 export const isoDate = z
