@@ -178,15 +178,17 @@ async function assertTidakAdaAntrean(tx, assignmentId) {
   if (pending) throw new AppError('Masih ada pembayaran Gagal validasi / Perlu ditinjau untuk penjualan ini. Selesaikan dulu.', 409);
 }
 
-/** Uang muka + titipan booking fee yang sudah terkumpul untuk pembeli ini. */
+/**
+ * Uang muka + titipan booking fee yang sudah terkumpul untuk pembeli ini.
+ * Bila kedua peran dipetakan ke akun yang sama (mis. keduanya dicatat sebagai
+ * pendapatan uang muka), saldonya dihitung sekali sebagai uang muka.
+ */
 async function terkumpul(tx, c) {
   const um = await akunPeran(tx, 'uang_muka_penjualan');
   const bf = await akunPeran(tx, 'titipan_booking_fee');
-  return {
-    um, bf,
-    saldoUm: await saldoAkunKp(tx, { akunId: um.id, kodePembantuId: c.kp.id, proyekId: c.proyekId }),
-    saldoBf: await saldoAkunKp(tx, { akunId: bf.id, kodePembantuId: c.kp.id, proyekId: c.proyekId }),
-  };
+  const saldoUm = await saldoAkunKp(tx, { akunId: um.id, kodePembantuId: c.kp.id, proyekId: c.proyekId });
+  const saldoBf = bf.id === um.id ? 0n : await saldoAkunKp(tx, { akunId: bf.id, kodePembantuId: c.kp.id, proyekId: c.proyekId });
+  return { um, bf, saldoUm, saldoBf };
 }
 
 export async function bast(actor, id, { tanggal, nilaiHpp = 0 }) {

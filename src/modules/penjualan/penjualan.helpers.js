@@ -35,15 +35,31 @@ export async function kodePembantuPembeli(tx, customer, proyekId) {
 /**
  * Saldo terbuku satu akun untuk satu kode pembantu di satu proyek, bertanda
  * menurut saldo normal akunnya, dalam sen.
+ *
+ * Termasuk saldo awal proyek yang sudah dikunci: pembayaran pembeli sebelum
+ * tanggal mulai (status historis) hanya tercatat di sana, jadi tanpa ini BAST
+ * menganggap uangnya belum terkumpul (piutang terlalu besar) dan Batal
+ * mengembalikan terlalu sedikit. Saldo awal yang belum dikunci masih bisa
+ * berubah, sehingga tidak dipakai untuk membentuk jurnal.
  */
 export async function saldoAkunKp(tx, { akunId, kodePembantuId, proyekId }) {
   const [row] = await tx.execute(sql`
-    SELECT COALESCE(SUM(CASE WHEN a.tipe_saldo = 'k' THEN jd.kredit - jd.debit ELSE jd.debit - jd.kredit END), 0) saldo
-    FROM finance.jurnal_detail jd
-    JOIN finance.jurnal j ON j.id = jd.jurnal_id
-    JOIN finance.akun a ON a.id = jd.akun_id
-    WHERE jd.akun_id = ${akunId} AND jd.kode_pembantu_id = ${kodePembantuId}
-      AND j.proyek_id = ${proyekId} AND j.status IN (${terbuku})
+    WITH baris AS (
+      SELECT jd.debit, jd.kredit
+      FROM finance.jurnal_detail jd
+      JOIN finance.jurnal j ON j.id = jd.jurnal_id
+      WHERE jd.akun_id = ${akunId} AND jd.kode_pembantu_id = ${kodePembantuId}
+        AND j.proyek_id = ${proyekId} AND j.status IN (${terbuku})
+      UNION ALL
+      SELECT s.debit, s.kredit
+      FROM finance.saldo_awal s
+      JOIN finance.saldo_awal_periode p ON p.id = s.periode_id
+      WHERE s.akun_id = ${akunId} AND s.kode_pembantu_id = ${kodePembantuId}
+        AND p.proyek_id = ${proyekId} AND p.status = 'terkunci'
+    )
+    SELECT COALESCE(SUM(CASE WHEN a.tipe_saldo = 'k' THEN b.kredit - b.debit ELSE b.debit - b.kredit END), 0) saldo
+    FROM baris b CROSS JOIN finance.akun a
+    WHERE a.id = ${akunId}
   `);
   return BigInt(Math.round(Number(row.saldo) * 100));
 }
