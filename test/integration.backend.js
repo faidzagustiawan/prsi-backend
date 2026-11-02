@@ -230,6 +230,33 @@ test('backend integration with real PostgreSQL', async (t) => {
       // Tidak dipilih ulang otomatis; proses ulang manual tetap memberi alasan yang sama tanpa error 422.
       assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0);
       assert.equal((await call('POST', `/pembayaran-track/${closedPeriod}/proses`)).statusProses, 'gagal_validasi');
+      // Setelah jeda, gagal validasi tanpa jurnal dicoba ulang otomatis (penyebab di SI bisa sudah diperbaiki).
+      await sql`UPDATE finance.status_pembayaran_si SET updated_at = now() - interval '2 hours' WHERE payment_id IN (${beforeOpening}, ${closedPeriod})`;
+      const retried = await call('POST', '/pembayaran-track/proses');
+      assert.equal(retried.diproses, 2);
+      assert.equal(retried.gagal_validasi, 2);
+      assert.equal((await call('POST', '/pembayaran-track/proses')).diproses, 0, 'retry waits for the next window');
+    });
+    await t.test('payments journaled before SPPR are allocated to the schedule at finalization', async () => {
+      const customer = randomUUID();
+      const assignment = randomUUID();
+      await sql`INSERT INTO finance.trk_customers (id, track_id, nama) VALUES (${customer}, ${randomUUID()}, 'Early Buyer')`;
+      await sql`INSERT INTO finance.trk_assignments (id, track_id, unit_id, customer_id, tipe_pembayaran, harga, uang_muka) VALUES (${assignment}, ${randomUUID()}, ${units[0]}, ${customer}, 'cash_lunas', 1000, 100)`;
+      const paymentId = randomUUID();
+      await sql`INSERT INTO finance.trk_payments (id, track_id, assignment_id, tanggal, nominal, jenis, status_verifikasi, rekening_tujuan, bukti_url)
+        VALUES (${paymentId}, ${randomUUID()}, ${assignment}, '2026-10-15', 60, 'uang_muka', 'terverifikasi', '99001', 'https://evidence.example.test/early.jpg')`;
+      await call('POST', '/pembayaran-track/proses');
+      const [before] = await sql`SELECT status_proses FROM finance.status_pembayaran_si WHERE payment_id = ${paymentId}`;
+      assert.equal(before.status_proses, 'dijurnal');
+      const [{ n: kosong }] = await sql`SELECT count(*)::int n FROM finance.alokasi_pembayaran WHERE payment_id = ${paymentId}`;
+      assert.equal(kosong, 0, 'no sale yet, so nothing to allocate');
+      const d = await call('POST', '/dokumen', { ptId: pts[0].id, kavlingId: units[0], assignmentId: assignment, tanggalPerjanjian: '2026-10-10', hargaAwal: 1000, uangMuka: 100 }, 201);
+      await call('PUT', `/dokumen/${d.id}/jadwal`, { tanggalAcuan: 10, nominalPerBulan: 100, tanggalMulai: '2026-10-01', jatuhTempoTerakhir: '2026-10-31' });
+      assert.equal((await call('POST', `/dokumen/${d.id}/finalisasi`)).status, 'final');
+      const alokasi = await sql`SELECT jadwal_id, nominal FROM finance.alokasi_pembayaran WHERE payment_id = ${paymentId}`;
+      assert.equal(alokasi.length, 1);
+      assert.notEqual(alokasi[0].jadwal_id, null);
+      assert.equal(Number(alokasi[0].nominal), 60);
     });
     await t.test('option A cutoff: old payments become historis, backdated input is reviewed, legacy is held without cutover', async () => {
       const { env } = await import('../src/config/env.js');
@@ -353,6 +380,22 @@ test('backend integration with real PostgreSQL', async (t) => {
         const opening = ok.baris.find((b) => b.customerId === noTrack);
         assert.deepEqual([opening.totalHistoris, opening.saldoAwalDiterima, opening.selisih, opening.status], [0, 30, 30, 'selisih']);
         assert.deepEqual([ok.ringkasan.cocok, ok.ringkasan.selisih], [1, 1]);
+
+        // BAST memakai uang yang terkumpul termasuk saldo awal terkunci. Titipan BF dan uang muka
+        // dipetakan ke akun yang sama (accounts[2]), jadi saldonya dihitung sekali.
+        const [piutangAkun, penjualanAkun] = [randomUUID(), randomUUID()];
+        await sql`INSERT INTO finance.akun (id, kode, nama, kategori, tipe_saldo, klasifikasi) VALUES
+          (${piutangAkun}, '103', 'Piutang penjualan', 'aktiva', 'd', 'neraca'), (${penjualanAkun}, '104', 'Penjualan', 'pendapatan', 'k', 'laba_rugi')`;
+        await sql`INSERT INTO finance.akun_sistem (kunci, akun_id) VALUES ('piutang_penjualan', ${piutangAkun}), ('penjualan', ${penjualanAkun})
+          ON CONFLICT (kunci) DO UPDATE SET akun_id = EXCLUDED.akun_id`;
+        const [pj] = await sql`SELECT id FROM finance.penjualan_keuangan WHERE assignment_id = ${assignment}`;
+        await call('POST', `/piutang/${pj.id}/bast`, { tanggal: '2026-10-20' });
+        const bastRows = await sql`SELECT jd.akun_id, jd.debit::numeric d, jd.kredit::numeric k FROM finance.jurnal_detail jd
+          JOIN finance.jurnal j ON j.id = jd.jurnal_id WHERE j.ref_id = ${pj.id} AND j.sumber = 'penjualan' AND j.uraian LIKE 'BAST%'`;
+        const nilaiAkun = (id, kol) => bastRows.filter((r) => r.akun_id === id).reduce((t, r) => t + Number(r[kol]), 0);
+        assert.equal(nilaiAkun(accounts[2], 'd'), 80, 'historical down payment from the locked opening balance, counted once');
+        assert.equal(nilaiAkun(piutangAkun, 'd'), 920);
+        assert.equal(nilaiAkun(penjualanAkun, 'k'), 1000);
 
         // Proyek 0: input mundur, refund, dan historis yang berubah menunggu keputusan Keuangan.
         const review = await call('GET', `/pembayaran-track/rekonsiliasi-historis?proyekId=${projects[0]}`);

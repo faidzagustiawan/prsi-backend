@@ -23,7 +23,7 @@ import { akunPeran } from '../akun-sistem/akun-sistem.routes.js';
 import { findAssignment, kodePembantuPembeli, saldoAkunKp, hitungJadwal } from '../penjualan/penjualan.helpers.js';
 import * as adendum from './adendum.service.js';
 import { enqueueBill } from '../../sync/billing-outbox.js';
-import { alokasiHistoris } from '../penjualan/pembayaran.service.js';
+import { alokasiSetelahSppr } from '../penjualan/pembayaran.service.js';
 
 const STATUS_FIELD = 'status';
 
@@ -391,16 +391,17 @@ export async function finalisasi(actor, id) {
       penjualanId: pj.id, assignmentId: a.id, dokumenId: d.id, noUrut: i + 1, tanggal: r.tanggal,
       jumlah: centsToString(toCents(r.jumlah)), keterangan: r.keterangan || `DP ${i + 1}`,
     }))).returning() : [];
-    // Pembayaran historis (saldo awal) yang masuk sebelum SPPR mengisi tagihan baru lebih dulu.
-    await alokasiHistoris(tx, actor, a.id);
+    // Pembayaran yang masuk sebelum SPPR (historis maupun sudah dijurnal) mengisi tagihan baru lebih dulu.
+    await alokasiSetelahSppr(tx, actor, a.id);
     for (const j of inserted) await enqueueBill(tx,j.id);
 
     // Booking fee yang sudah masuk pindah dari titipan ke uang muka penjualan
     const kp = await kodePembantuPembeli(tx, customer, unit.projectId);
     const titipan = await akunPeran(tx, 'titipan_booking_fee');
     const saldoBf = await saldoAkunKp(tx, { akunId: titipan.id, kodePembantuId: kp.id, proyekId: unit.projectId });
-    if (saldoBf > 0n) {
-      const uangMuka = await akunPeran(tx, 'uang_muka_penjualan');
+    const uangMuka = saldoBf > 0n ? await akunPeran(tx, 'uang_muka_penjualan') : null;
+    // Satu akun untuk kedua peran: tidak ada yang perlu dipindah.
+    if (saldoBf > 0n && uangMuka.id !== titipan.id) {
       const nominal = Number(centsToString(saldoBf));
       await buatJurnal(tx, actor, {
         tanggal: d.tanggal, uraian: `SPPR ${d.noDokumen} final: booking fee ${customer.nama} menjadi uang muka`,

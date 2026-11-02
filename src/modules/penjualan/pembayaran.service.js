@@ -104,11 +104,22 @@ async function klasifikasiPembayaranLama(tx, actor, p) {
   return hasil;
 }
 
-/** Alokasikan ulang pembayaran historis satu assignment, mis. setelah SPPR difinalkan. */
-export async function alokasiHistoris(tx, actor, assignmentId) {
+/**
+ * Alokasikan pembayaran yang masuk sebelum SPPR difinalkan ke jadwal barunya:
+ * - historis (saldo awal), dialokasikan ulang;
+ * - dijurnal tanpa tagihan SI yang belum punya alokasi sama sekali. Saat dijurnal
+ *   penjualannya belum ada, jadi alokasikan() berhenti dan kartu piutang
+ *   menampilkan jadwal "belum bayar" walau uangnya sudah dibukukan.
+ * Urut tanggal bayar, jadi jadwal terlama terisi lebih dulu.
+ */
+export async function alokasiSetelahSppr(tx, actor, assignmentId) {
+  const belumDialokasi = sql`NOT EXISTS (SELECT 1 FROM ${alokasiPembayaran} WHERE ${alokasiPembayaran.paymentId} = ${trkPayments.id})`;
   const rows = await tx.select({ p: trkPayments }).from(trkPayments)
     .innerJoin(statusPembayaranSi, eq(statusPembayaranSi.paymentId, trkPayments.id))
-    .where(and(eq(trkPayments.assignmentId, assignmentId), eq(statusPembayaranSi.statusProses, 'historis')))
+    .where(and(eq(trkPayments.assignmentId, assignmentId), or(
+      eq(statusPembayaranSi.statusProses, 'historis'),
+      and(eq(statusPembayaranSi.statusProses, 'dijurnal'), isNull(trkPayments.siJadwalId), belumDialokasi),
+    )))
     .orderBy(asc(trkPayments.tanggal), asc(trkPayments.syncedAt));
   for (const { p } of rows) await alokasikan(tx, actor, p);
   return rows.length;
@@ -443,11 +454,21 @@ export async function proses(actor, paymentId) {
   });
 }
 
+/** Jeda coba ulang otomatis pembayaran gagal validasi (lihat prosesSemua). */
+export const JEDA_COBA_ULANG_GAGAL_MENIT = 60;
+
 /**
  * Proses semua yang perlu: belum pernah diproses, atau menunggu / sudah
  * dijurnal tetapi barisnya disinkron ulang dari Track sejak terakhir diproses.
  * Tanpa perubahan di Track, status menunggu tidak akan berubah, jadi tidak
  * diproses ulang setiap putaran.
+ *
+ * Gagal validasi tanpa jurnal juga dicoba ulang, paling sering sekali per
+ * JEDA_COBA_ULANG_GAGAL_MENIT: penyebabnya biasanya ada di SI (akun kas belum
+ * dipetakan, akun sistem kosong, periode terkunci) dan bisa sudah diperbaiki
+ * tanpa perubahan apa pun di Track. Yang sudah punya draft jurnal (bukti tidak
+ * ada, terindikasi duplikat) dan perlu_ditinjau tetap menunggu keputusan orang,
+ * begitu juga pembayaran tagihan SI agar hasilnya tidak dikirim ulang ke Track.
  */
 export async function prosesSemua(actor) {
   // Pembayaran tanpa tagihan hanya dipilih bila cutover siap (Opsi A); sisanya tetap
@@ -462,6 +483,10 @@ export async function prosesSemua(actor) {
     .where(and(or(
       isNull(statusPembayaranSi.paymentId),
       and(inArray(statusPembayaranSi.statusProses, ['menunggu', 'dijurnal', 'historis']), sql`${trkPayments.syncedAt} > ${statusPembayaranSi.updatedAt}`),
+      and(
+        eq(statusPembayaranSi.statusProses, 'gagal_validasi'), isNull(statusPembayaranSi.jurnalId), isNull(trkPayments.siJadwalId),
+        sql`${statusPembayaranSi.updatedAt} < now() - make_interval(mins => ${JEDA_COBA_ULANG_GAGAL_MENIT})`,
+      ),
     ), or(isNotNull(trkPayments.siJadwalId), legacyBoleh)))
     .orderBy(asc(trkPayments.tanggal));
   const hasil = { diproses: 0, dijurnal: 0, historis: 0, menunggu: 0, gagal_validasi: 0, perlu_ditinjau: 0, ditolak: 0, ditahan: 0 };
