@@ -157,6 +157,26 @@ async function akunKasDariRekening(tx, rekening) {
   return row ?? null;
 }
 
+/**
+ * Akun debit pembayaran. PR Track tidak lagi mengirim rekening tujuan, jadi
+ * pembayaran tanpa rekening memakai akun kas default dari Akun Sistem.
+ * Rekening yang diisi tetapi tidak dikenal tetap ditolak.
+ */
+async function akunKasPembayaran(tx, rekening) {
+  if (digits(rekening)) {
+    const kas = await akunKasDariRekening(tx, rekening);
+    return kas ? { kas } : { alasan: `Rekening tujuan ${rekening} tidak cocok dengan akun kas/bank mana pun.` };
+  }
+  try {
+    const kas = await akunPeran(tx, 'kas_penerimaan_track');
+    if (!kas.isKasBank) return { alasan: `Akun ${kas.kode} untuk penerimaan PR Track bukan akun kas/bank.` };
+    return { kas };
+  } catch (e) {
+    if (e instanceof AppError) return { alasan: `Rekening tujuan kosong dan ${e.message}` };
+    throw e;
+  }
+}
+
 async function penjualanOf(tx, assignmentId) {
   const [pj] = await tx.select().from(penjualanKeuangan).where(eq(penjualanKeuangan.assignmentId, assignmentId)).limit(1);
   return pj ?? null;
@@ -276,8 +296,8 @@ export async function prosesPembayaranTx(tx, actor, paymentId) {
   if (!asg || asg.isDeleted) berat.push('Penjualan tidak ada di cermin PR Track.');
   if (!JENIS_PEMBAYARAN.includes(p.jenis)) berat.push(`Jenis pembayaran tidak dikenal: ${p.jenis ?? '-'}.`);
   if (!(toCents(p.nominal) > 0n)) berat.push('Nominal harus lebih dari 0.');
-  const kas = await akunKasDariRekening(tx, p.rekeningTujuan);
-  if (!kas) berat.push(`Rekening tujuan ${p.rekeningTujuan ?? '-'} tidak cocok dengan akun kas/bank mana pun.`);
+  const { kas, alasan: alasanKas } = await akunKasPembayaran(tx, p.rekeningTujuan);
+  if (!kas) berat.push(alasanKas);
   if (berat.length) {
     if (p.siJadwalId) await enqueuePaymentResult(tx,p,'perlu_ditinjau',{alasan:berat.join(' ')});
     return setStatus(tx,p.id,'gagal_validasi',{alasan:berat.join(' ')});

@@ -122,6 +122,8 @@ test('billing integration across two isolated databases',async t=>{
   const [cash]=await si`INSERT INTO finance.akun(kode,nama,kategori,tipe_saldo,klasifikasi,is_kas_bank,no_rekening) VALUES('111','Bank','aktiva','d','neraca',true,'123456') RETURNING id`;
   const [credit]=await si`INSERT INTO finance.akun(kode,nama,kategori,tipe_saldo,klasifikasi) VALUES('211','Customer advances','hutang','k','neraca') RETURNING id`;
   for(const key of ['titipan_booking_fee','uang_muka_penjualan','piutang_penjualan']) await si`INSERT INTO finance.akun_sistem(kunci,akun_id) VALUES(${key},${credit.id})`;
+  // PR Track tidak lagi mengirim rekening tujuan; debit memakai akun kas default.
+  await si`INSERT INTO finance.akun_sistem(kunci,akun_id) VALUES('kas_penerimaan_track',${cash.id})`;
   const doc=await call('POST','/dokumen',{ptId:pt.id,kavlingId:localUnit.id,assignmentId:localAssignment.id,tanggalPerjanjian:'2026-10-01',hargaAwal:1000,uangMuka:200},201);
   await call('PUT',`/dokumen/${doc.id}/jadwal`,{tanggalAcuan:10,nominalPerBulan:100,tanggalMulai:'2026-10-01',jatuhTempoTerakhir:'2026-11-30'});
   await call('POST',`/dokumen/${doc.id}/finalisasi`);
@@ -130,7 +132,7 @@ test('billing integration across two isolated databases',async t=>{
   const [pj]=await si`SELECT * FROM finance.penjualan_keuangan WHERE assignment_id=${localAssignment.id}`;
   const bills=await si`SELECT * FROM finance.jadwal_angsuran WHERE penjualan_id=${pj.id} ORDER BY no_urut`;
   const capture=createBillingCapture(track);
-  const submission=(bill,extra={})=>({si_jadwal_id:bill.id,request_id:randomUUID(),tanggal_bayar:'2026-10-15',rekening_tujuan:'123456',bukti_pembayaran:'https://evidence.example.test/bukti.jpg',...extra});
+  const submission=(bill,extra={})=>({si_jadwal_id:bill.id,request_id:randomUUID(),tanggal_bayar:'2026-10-15',bukti_pembayaran:'https://evidence.example.test/bukti.jpg',...extra});
   let payment,localPayment,posted;
   await t.test('only writer token and allowed source may deliver; retries and stale versions are safe',async()=>{
    const row=bills[0];
@@ -168,6 +170,8 @@ test('billing integration across two isolated databases',async t=>{
    assert.equal(before.tagihan.sisa,Number(localPayment.nominal),'dialog shows the remaining bill amount before verification');
    posted=await call('POST',`/pembayaran-track/${localPayment.id}/verifikasi`,{keputusan:'terima'});
    assert.equal(posted.statusProses,'dijurnal');
+   const [debit]=await si`SELECT d.akun_id FROM finance.jurnal_detail d WHERE d.jurnal_id=${posted.jurnalId} AND d.debit>0`;
+   assert.equal(debit.akun_id,cash.id,'payment without rekening tujuan debits the default PR Track cash account');
    await call('POST',`/pembayaran-track/${localPayment.id}/verifikasi`,{keputusan:'terima'});
    await cycle();await cycle();
    const allocations=await si`SELECT jadwal_id,nominal FROM finance.alokasi_pembayaran WHERE payment_id=${localPayment.id}`;
