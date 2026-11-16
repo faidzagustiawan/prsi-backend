@@ -12,6 +12,7 @@
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '../../config/database.js';
 import { penjualanKeuangan, jadwalAngsuran, alokasiPembayaran, dokumen } from '../../shared/schemas/penjualan.schema.js';
+import { jurnalDetail, akun } from '../../shared/schemas/akuntansi.schema.js';
 import { trkAssignments, trkUnits, trkCustomers, trkPayments, statusPembayaranSi } from '../../shared/schemas/track.schema.js';
 import { auditLogs, users } from '../../shared/schemas/finance.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
@@ -54,8 +55,9 @@ const base = () => db
 async function loadDetail(rows) {
   const pjIds = rows.map((r) => r.pj.id);
   const asgIds = rows.map((r) => r.a.id);
-  if (!pjIds.length) return { jadwal: [], alokasi: [], payments: [], riwayat: [] };
-  const [jadwal, alokasi, payments, riwayat] = await Promise.all([
+  const bastIds = rows.map((r) => r.pj.jurnalBastId).filter(Boolean);
+  if (!pjIds.length) return { jadwal: [], alokasi: [], payments: [], riwayat: [], hppByJurnal: new Map() };
+  const [jadwal, alokasi, payments, riwayat, hpp] = await Promise.all([
     db.select().from(jadwalAngsuran).where(inArray(jadwalAngsuran.penjualanId, pjIds))
       .orderBy(asc(jadwalAngsuran.tanggal), asc(jadwalAngsuran.noUrut)),
     db.select({ al: alokasiPembayaran, tanggal: trkPayments.tanggal, trackId: trkPayments.trackId }).from(alokasiPembayaran)
@@ -67,8 +69,15 @@ async function loadDetail(rows) {
       .where(and(inArray(trkPayments.assignmentId, asgIds), eq(trkPayments.isDeleted, false))).orderBy(asc(trkPayments.tanggal)),
     db.select({ log: auditLogs, oleh: users.nama }).from(auditLogs).leftJoin(users, eq(users.id, auditLogs.userId))
       .where(and(eq(auditLogs.entity, 'alokasi'), inArray(auditLogs.entityId, pjIds))).orderBy(desc(auditLogs.createdAt)),
+    // HPP tidak disimpan di penjualan_keuangan; nilainya = debit akun kategori HPP di jurnal BAST
+    bastIds.length
+      ? db.select({ jurnalId: jurnalDetail.jurnalId, nilai: sql`COALESCE(SUM(${jurnalDetail.debit} - ${jurnalDetail.kredit}), 0)` })
+        .from(jurnalDetail).innerJoin(akun, eq(akun.id, jurnalDetail.akunId))
+        .where(and(inArray(jurnalDetail.jurnalId, bastIds), eq(akun.kategori, 'hpp'))).groupBy(jurnalDetail.jurnalId)
+      : [],
   ]);
-  return { jadwal, alokasi, payments, riwayat };
+  const hppByJurnal = new Map(hpp.map((h) => [h.jurnalId, toCents(h.nilai)]));
+  return { jadwal, alokasi, payments, riwayat, hppByJurnal };
 }
 
 function toTagihanDto(r, d) {
@@ -94,6 +103,8 @@ function toTagihanDto(r, d) {
   const totalDibayar = dijurnal.reduce((s, x) => s + toCents(x.p.nominal), 0n);
   const keJadwal = new Set(alokasi.filter((x) => x.al.jadwalId).map((x) => x.al.paymentId));
   const nilai = toCents(pj.nilaiSppr);
+  // Laba kotor penjualan = nilai SPPR - HPP, hanya setelah BAST (saat penjualan dan HPP diakui)
+  const hppCents = pj.jurnalBastId ? (d.hppByJurnal.get(pj.jurnalBastId) ?? 0n) : null;
 
   return {
     id: pj.id,
@@ -131,6 +142,8 @@ function toTagihanDto(r, d) {
       id: log.id, tanggal: log.createdAt, periodeAsal: log.metadata?.periodeAsal, periodeTujuan: log.metadata?.periodeTujuan,
       nominal: log.metadata?.nominal, oleh: oleh ?? 'Sistem',
     })),
+    nilaiHpp: hppCents === null ? null : num(hppCents),
+    labaKotor: hppCents === null ? null : num(nilai - hppCents),
     nilaiCashbackKpr: toNumber(pj.nilaiCashbackKpr) ?? 0,
     nilaiAdminKpr: toNumber(pj.nilaiAdminKpr) ?? 0,
   };
@@ -159,7 +172,10 @@ export async function get(id) {
 export async function ringkasan({ proyekId } = {}) {
   const items = (await list({ proyekId, statusBast: 'sudah_bast' })).filter((x) => x.status === 'aktif');
   const sum = (key) => Number(centsToString(items.reduce((s, x) => s + toCents(x[key]), 0n)));
-  return { jumlah: items.length, totalNilaiKontrak: sum('nilaiSppr'), totalDibayar: sum('totalDibayar'), totalSisa: sum('sisa') };
+  return {
+    jumlah: items.length, totalNilaiKontrak: sum('nilaiSppr'), totalDibayar: sum('totalDibayar'), totalSisa: sum('sisa'),
+    totalHpp: sum('nilaiHpp'), totalLabaKotor: sum('labaKotor'),
+  };
 }
 
 // ── Aksi ────────────────────────────────────────────────────

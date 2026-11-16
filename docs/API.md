@@ -332,7 +332,7 @@ kategori ini. Pembeli yang sudah BAST hilang dari saldo hutang dan tampil di `/p
 | Method | Path | Body / query |
 | --- | --- | --- |
 | GET | `/piutang` | `?proyekId&statusBast` → `KavlingTagihan[]`. Default `statusBast=sudah_bast`; penjualan belum BAST ada di `/hutang/penjualan-unit` (`belum_bast` tetap diterima untuk kompatibilitas) |
-| GET | `/piutang/ringkasan` | `?proyekId` → `{ jumlah, totalNilaiKontrak, totalDibayar, totalSisa }`, hanya penjualan sudah BAST |
+| GET | `/piutang/ringkasan` | `?proyekId` → `{ jumlah, totalNilaiKontrak, totalDibayar, totalSisa, totalHpp, totalLabaKotor }`, hanya penjualan sudah BAST |
 | GET | `/piutang/:id` | |
 | POST | `/piutang/:id/bast` | `{ tanggal, nilaiHpp? }` |
 | POST | `/piutang/:id/batal` | `{ tanggal, potongan, alasan? }` (belum BAST) |
@@ -344,6 +344,8 @@ kategori ini. Pembeli yang sudah BAST hilang dari saldo hutang dan tampil di `/p
 - `assignmentId`, `status`, `tanggalBast`, `nomorSppr`, `totalDibayar`, `sisa`, `nilaiCashbackKpr`, `nilaiAdminKpr`;
 - `pembayaran[]` (semua pembayaran Track beserta `statusProses`);
 - per periode: `jadwalId`, `status` (sudah dihitung server, sama dengan `computeStatus`).
+
+`KavlingTagihan` juga membawa `nilaiHpp` (debit akun kategori HPP di jurnal BAST) dan `labaKotor` (`nilaiSppr - nilaiHpp`); keduanya `null` sebelum BAST.
 
 `dibayar` per periode hanya berasal dari pembayaran yang sudah dijurnal. Kartu piutang tidak bisa diubah langsung; angkanya berubah lewat pembayaran Track, koreksi alokasi, BAST, atau batal.
 
