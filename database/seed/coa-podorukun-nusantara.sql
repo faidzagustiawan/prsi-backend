@@ -2,7 +2,8 @@
 -- Idempoten: akun yang kodenya sudah ada dilewati (ON CONFLICT DO NOTHING).
 -- Induk diturunkan dari prefix kode; baris tanpa D/K di sheet = akun header,
 -- tipe saldonya mengikuti saldo normal kategori.
--- Butuh migrasi 0006 (tabel kategori_hutang_piutang). Koreksi dari sheet:
+-- Butuh migrasi 0006 (tabel kategori_hutang_piutang) dan 0011 (kategori
+-- penjualan_unit). 400210 uang muka user dipindah ke 212007 (hutang). Koreksi dari sheet:
 -- KAS 11100 -> 111000; 523100 di bawah 400000 (saldo normal K, bukan grup
 -- beban 523000); 113530 kategori pembeli (Penjualan). Afiliasi PT = pihak_ketiga.
 -- Modul hutang memakai akun berkode terkecil per kategori hutang/piutang
@@ -47,6 +48,7 @@ INSERT INTO coa_seed (kode, nama, induk, kategori, tipe_saldo, klasifikasi, kate
   ('210000', 'HUTANG JANGKA PENDEK', '200000', 'hutang', 'k', 'neraca', NULL, false, false, false),
   ('212005', 'HUTANG LAHAN', '210000', 'hutang', 'k', 'neraca', 'lahan', true, false, false),
   ('212006', 'HUTANG PPN', '210000', 'hutang', 'k', 'neraca', 'ppn', true, false, false),
+  ('212007', 'PEMASUKAN UANG MUKA USER', '210000', 'hutang', 'k', 'neraca', 'penjualan_unit', true, true, false),
   ('215000', 'HUTANG PIHAK KETIGA', '210000', 'hutang', 'k', 'neraca', NULL, false, false, false),
   ('215010', 'HUTANG AFILIASI PT. PODO RUKUN INDONESIA', '215000', 'hutang', 'k', 'neraca', 'pihak_ketiga', true, false, false),
   ('215020', 'HUTANG AFILIASI PT. PODO RUKUN NUSANTARA', '215000', 'hutang', 'k', 'neraca', 'pihak_ketiga', true, false, false),
@@ -69,7 +71,6 @@ INSERT INTO coa_seed (kode, nama, induk, kategori, tipe_saldo, klasifikasi, kate
   ('340200', 'DIVIDEN PODO RUKUN NUSANTARA', '340000', 'modal', 'k', 'neraca', NULL, false, false, false),
   ('400000', 'PENDAPATAN', NULL, 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
   ('400200', 'PENDAPATAN PODO RUKUN NUSANTARA', '400000', 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
-  ('400210', 'PEMASUKAN UANG MUKA USER', '400200', 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
   ('400220', 'PENCAIRAN REALISASI KPR USER', '400200', 'pendapatan', 'k', 'laba_rugi', NULL, false, false, false),
   ('500000', 'BIAYA', NULL, 'beban', 'd', 'laba_rugi', NULL, false, false, false),
   ('521000', 'HARGA POKOK PENJUALAN PODO RUKUN NUSANTARA', '500000', 'hpp', 'd', 'laba_rugi', NULL, false, false, false),

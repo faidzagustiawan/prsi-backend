@@ -18,15 +18,20 @@ export const nextMonth = (bulan) => {
  *
  * kategori: daftar kategori kode pembantu yang disertakan (opsional).
  * akunKategori: batasi ke baris akun berkategori tertentu, mis. 'hutang'.
+ * akunKategoriHp: batasi ke baris akun dengan kategori hutang/piutang COA
+ *   tertentu (mis. 'penjualan_unit'); kode pembantu tanpa gerak di akun itu
+ *   tidak ikut. Dipakai bila kategori kode pembantunya berbeda (pembeli).
  */
-export async function saldoKodePembantu({ bulan, proyekId, kategori, akunKategori }) {
+export async function saldoKodePembantu({ bulan, proyekId, kategori, akunKategori, akunKategoriHp }) {
   const start = `${bulan}-01`;
   const end = nextMonth(bulan);
   const filters = [
     proyekId ? sql`AND kp.proyek_id = ${proyekId}` : sql``,
     kategori?.length ? sql`AND kp.kategori IN (${sql.join(kategori.map((k) => sql`${k}`), sql`, `)})` : sql``,
   ];
-  const akunFilter = akunKategori ? sql`AND a.kategori = ${akunKategori}` : sql``;
+  const akunFilter = sql`${akunKategori ? sql`AND a.kategori = ${akunKategori}` : sql``} ${akunKategoriHp
+    ? sql`AND a.kategori_hp_id IN (SELECT k.id FROM finance.kategori_hutang_piutang k WHERE k.kode = ${akunKategoriHp})`
+    : sql``}`;
   // Dengan akunKategori, kode pembantu yang hanya dipakai di sisi lain (mis.
   // piutang antar proyek di proyek pemberi) tidak ikut ditampilkan.
   const sisiLain = akunKategori
@@ -54,6 +59,7 @@ export async function saldoKodePembantu({ bulan, proyekId, kategori, akunKategor
     LEFT JOIN gerak g ON g.kp_id = kp.id
     WHERE TRUE ${filters[0]} ${filters[1]} ${sisiLain}
     GROUP BY kp.id
+    ${akunKategoriHp ? sql`HAVING COUNT(g.kp_id) > 0` : sql``}
     ORDER BY kp.kode
   `);
 

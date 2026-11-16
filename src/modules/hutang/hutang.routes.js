@@ -7,7 +7,7 @@
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
-import { jurnal, jurnalDetail, akun, kodePembantu, saldoAwal, saldoAwalPeriode } from '../../shared/schemas/akuntansi.schema.js';
+import { jurnal, jurnalDetail, akun, kodePembantu, kategoriHutangPiutang, saldoAwal, saldoAwalPeriode } from '../../shared/schemas/akuntansi.schema.js';
 import { validate } from '../../middleware/validate.js';
 import { keuanganOnly, actorOf } from '../../middleware/authorize.js';
 import { uuidSchema, isoDate, bulanSchema, nominal } from '../../shared/utils/zod.js';
@@ -16,13 +16,40 @@ import { toNumber } from '../../shared/utils/money.js';
 import { buatJurnalOtomatis, setMirrorTx, hapusJurnalModulTx, ringkasJurnal } from '../jurnal/jurnal.service.js';
 import { saldoKodePembantu } from '../laporan/laporan.service.js';
 import { jatuhTempo } from '../pinjaman/pinjaman.service.js';
+import * as piutang from '../penjualan/piutang.service.js';
 import * as h from './hutang.helpers.js';
 
 const tags = ['Hutang'];
 
-// Kategori yang tampil di halaman Hutang (FE: KategoriHutang). Kontraktor
-// punya tab sendiri lewat modul kontrak.
-export const KATEGORI_HUTANG = ['lahan', 'ppn', 'pihak_ketiga', 'pemegang_saham', 'karyawan', 'antar_proyek', 'bank'];
+// Kategori yang bisa dicatat manual lewat POST /mutasi. Kontraktor punya tab
+// sendiri lewat modul kontrak.
+export const KATEGORI_MUTASI = ['lahan', 'ppn', 'pihak_ketiga', 'pemegang_saham', 'karyawan', 'antar_proyek', 'bank'];
+
+// Penjualan unit: uang pembeli yang diterima sebelum BAST (akun COA kategori
+// penjualan_unit, mis. 212007 uang muka user). Kode pembantunya kategori
+// pembeli dan geraknya hanya dari pembayaran PR Track, BAST, atau batal, jadi
+// tidak bisa dicatat manual. Setelah BAST saldonya nol dan penjualan pindah
+// ke halaman Piutang.
+export const PENJUALAN_UNIT = 'penjualan_unit';
+
+// Kategori yang tampil di halaman Hutang (FE: KategoriHutang).
+export const KATEGORI_HUTANG = [...KATEGORI_MUTASI, PENJUALAN_UNIT];
+
+/** Saldo hutang per kode pembantu; `kategoriHutang` = kategori halaman Hutang baris itu. */
+async function saldoHutang({ bulan, proyekId, kategori }) {
+  const pilih = kategori ? [kategori] : KATEGORI_HUTANG;
+  const biasa = pilih.filter((k) => k !== PENJUALAN_UNIT);
+  const [rows, unit] = await Promise.all([
+    biasa.length ? saldoKodePembantu({ bulan, proyekId, kategori: biasa, akunKategori: 'hutang' }) : [],
+    pilih.includes(PENJUALAN_UNIT)
+      ? saldoKodePembantu({ bulan, proyekId, kategori: ['pembeli'], akunKategori: 'hutang', akunKategoriHp: PENJUALAN_UNIT })
+      : [],
+  ]);
+  return [
+    ...rows.map((r) => ({ ...r, kategoriHutang: r.kodePembantu.kategori })),
+    ...unit.map((r) => ({ ...r, kategoriHutang: PENJUALAN_UNIT })),
+  ];
+}
 
 const bulanIni = () => new Date().toISOString().slice(0, 7);
 
@@ -33,7 +60,7 @@ function toMutasiDto(r, lawanByJurnal, info) {
     id: r.jurnalId,
     proyekId: r.proyekId,
     kodePembantuId: r.kodePembantuId,
-    kategori: r.kategori,
+    kategori: r.kategoriHp === PENJUALAN_UNIT ? PENJUALAN_UNIT : r.kategori,
     tanggal: r.tanggal,
     uraian: r.uraian,
     jenisMutasi: debit > 0 ? 'debit' : 'kredit',
@@ -54,7 +81,9 @@ async function listMutasi({ kodePembantuId, kategori, proyekId, jurnalIds: onlyI
   const filters = [isNotNull(jurnalDetail.kodePembantuId)];
   if (onlyIds) filters.push(inArray(jurnal.id, onlyIds));
   if (kodePembantuId) filters.push(eq(jurnalDetail.kodePembantuId, kodePembantuId));
-  if (kategori) filters.push(eq(kodePembantu.kategori, kategori));
+  // Penjualan unit: kode pembantu pembeli, hanya baris akun kategori penjualan_unit
+  if (kategori === PENJUALAN_UNIT) filters.push(eq(kategoriHutangPiutang.kode, PENJUALAN_UNIT));
+  else if (kategori) filters.push(eq(kodePembantu.kategori, kategori));
   if (proyekId) filters.push(eq(jurnal.proyekId, proyekId));
 
   const rows = await db
@@ -62,13 +91,14 @@ async function listMutasi({ kodePembantuId, kategori, proyekId, jurnalIds: onlyI
       jurnalId: jurnal.id, proyekId: jurnal.proyekId, tanggal: jurnal.tanggal, uraian: jurnal.uraian, noReferensi: jurnal.noReferensi,
       mirrorId: jurnal.mirrorId, sumber: jurnal.sumber, createdAt: jurnal.createdAt,
       kodePembantuId: jurnalDetail.kodePembantuId, debit: jurnalDetail.debit, kredit: jurnalDetail.kredit,
-      kategori: kodePembantu.kategori, proyekLawanId: kodePembantu.proyekLawanId,
+      kategori: kodePembantu.kategori, proyekLawanId: kodePembantu.proyekLawanId, kategoriHp: kategoriHutangPiutang.kode,
     })
     .from(jurnalDetail)
     .innerJoin(jurnal, eq(jurnal.id, jurnalDetail.jurnalId))
     .innerJoin(kodePembantu, eq(kodePembantu.id, jurnalDetail.kodePembantuId))
     .innerJoin(akun, eq(akun.id, jurnalDetail.akunId))
-    .where(and(...filters, isNotNull(akun.kategoriHpId)))
+    .innerJoin(kategoriHutangPiutang, eq(kategoriHutangPiutang.id, akun.kategoriHpId))
+    .where(and(...filters))
     .orderBy(desc(jurnal.tanggal), desc(jurnal.createdAt));
 
   const jurnalIds = [...new Set(rows.map((r) => r.jurnalId))];
@@ -107,7 +137,9 @@ async function saldoAwalMutasi(kodePembantuId) {
 
 const mutasiBody = z.object({
   proyekId: uuidSchema,
-  kategori: z.enum(KATEGORI_HUTANG),
+  kategori: z.enum(KATEGORI_MUTASI, {
+    error: 'Kategori tidak bisa dicatat manual. Hutang penjualan unit berasal dari pembayaran PR Track.',
+  }),
   kodePembantuId: uuidSchema.optional().nullable(),
   kodePembantuBaru: z.string().trim().max(150).optional().nullable(),
   tanggal: isoDate,
@@ -185,14 +217,14 @@ export default async function hutangRoutes(fastify) {
 
   fastify.get('/ringkasan', {
     preHandler: [...guard, validate({ query: z.object({ bulan: bulanSchema.optional(), proyekId: uuidSchema.optional() }) })],
-    schema: { tags, description: 'Kartu ringkasan halaman Hutang: total, per kategori, jatuh tempo pinjaman 14 hari' },
+    schema: { tags, description: 'Kartu ringkasan halaman Hutang: total, per kategori (termasuk penjualan_unit), jatuh tempo pinjaman 14 hari' },
   }, async (request) => {
     const bulan = request.query.bulan ?? bulanIni();
-    const saldo = await saldoKodePembantu({ bulan, proyekId: request.query.proyekId, kategori: KATEGORI_HUTANG, akunKategori: 'hutang' });
+    const saldo = await saldoHutang({ bulan, proyekId: request.query.proyekId });
     const perKategori = Object.fromEntries(KATEGORI_HUTANG.map((k) => [k, 0]));
     let total = 0;
     for (const s of saldo) {
-      perKategori[s.kodePembantu.kategori] = Math.round((perKategori[s.kodePembantu.kategori] + s.saldoAkhir) * 100) / 100;
+      perKategori[s.kategoriHutang] = Math.round((perKategori[s.kategoriHutang] + s.saldoAkhir) * 100) / 100;
       total += s.saldoAkhir;
     }
     const reminders = await jatuhTempo({ hari: 14 });
@@ -206,10 +238,14 @@ export default async function hutangRoutes(fastify) {
     preHandler: [...guard, validate({
       query: z.object({ bulan: bulanSchema.optional(), proyekId: uuidSchema.optional(), kategori: z.enum(KATEGORI_HUTANG).optional() }),
     })],
-    schema: { tags, description: 'Saldo hutang per kode pembantu untuk satu bulan (FE: getSaldoPerKodePembantu)' },
+    schema: {
+      tags,
+      description: 'Saldo hutang per kode pembantu untuk satu bulan (FE: getSaldoPerKodePembantu). ' +
+        'kategoriHutang = kategori halaman Hutang; untuk penjualan_unit kode pembantunya kategori pembeli.',
+    },
   }, async (request) => {
     const { bulan = bulanIni(), proyekId, kategori } = request.query;
-    const data = await saldoKodePembantu({ bulan, proyekId, kategori: kategori ? [kategori] : KATEGORI_HUTANG, akunKategori: 'hutang' });
+    const data = await saldoHutang({ bulan, proyekId, kategori });
     return { success: true, message: 'Success', data, meta: { bulan } };
   });
 
@@ -222,6 +258,18 @@ export default async function hutangRoutes(fastify) {
     const items = await listMutasi(request.query);
     const awal = request.query.kodePembantuId ? await saldoAwalMutasi(request.query.kodePembantuId) : [];
     return { success: true, message: 'Success', data: [...items, ...awal] };
+  });
+
+  fastify.get('/penjualan-unit', {
+    preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema.optional() }) })],
+    schema: {
+      tags,
+      description: 'Penjualan unit aktif yang belum BAST (bentuk KavlingTagihan). Uang yang sudah dibayar pembeli ' +
+        '(totalDibayar) adalah hutang sampai BAST; setelah BAST penjualan tampil di /piutang.',
+    },
+  }, async (request) => {
+    const items = (await piutang.list({ proyekId: request.query.proyekId, statusBast: 'belum_bast' })).filter((x) => x.status === 'aktif');
+    return { success: true, message: 'Success', data: items };
   });
 
   fastify.get('/antar-proyek', {

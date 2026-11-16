@@ -136,7 +136,11 @@ function toTagihanDto(r, d) {
   };
 }
 
-export async function list({ proyekId, statusBast } = {}) {
+/**
+ * Kartu tagihan. Piutang hanya penjualan yang sudah BAST (default); sebelum
+ * BAST uang pembeli adalah hutang penjualan unit (GET /hutang/penjualan-unit).
+ */
+export async function list({ proyekId, statusBast = 'sudah_bast' } = {}) {
   const f = [];
   if (proyekId) f.push(eq(trkUnits.projectId, proyekId));
   if (statusBast === 'sudah_bast') f.push(sql`${penjualanKeuangan.tanggalBast} IS NOT NULL`);
@@ -153,7 +157,7 @@ export async function get(id) {
 }
 
 export async function ringkasan({ proyekId } = {}) {
-  const items = (await list({ proyekId })).filter((x) => x.status === 'aktif');
+  const items = (await list({ proyekId, statusBast: 'sudah_bast' })).filter((x) => x.status === 'aktif');
   const sum = (key) => Number(centsToString(items.reduce((s, x) => s + toCents(x[key]), 0n)));
   return { jumlah: items.length, totalNilaiKontrak: sum('nilaiSppr'), totalDibayar: sum('totalDibayar'), totalSisa: sum('sisa') };
 }

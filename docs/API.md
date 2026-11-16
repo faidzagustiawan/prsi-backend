@@ -154,10 +154,11 @@ Setiap transaksi modul membuat jurnal. Dokumen modul (mutasi, transaksi pinjaman
 
 | Method | Path | Body / query |
 | --- | --- | --- |
-| GET | `/hutang/ringkasan` | `?bulan&proyekId` → `{ bulan, totalHutang, perKategori: { lahan, bank, ... }, jatuhTempoDekat }` |
-| GET | `/hutang/saldo` | `?bulan&proyekId&kategori` → sama dengan `getSaldoPerKodePembantu` (`SaldoKodePembantu[]`) |
+| GET | `/hutang/ringkasan` | `?bulan&proyekId` → `{ bulan, totalHutang, perKategori: { lahan, bank, ..., penjualan_unit }, jatuhTempoDekat }` |
+| GET | `/hutang/saldo` | `?bulan&proyekId&kategori` → sama dengan `getSaldoPerKodePembantu` (`SaldoKodePembantu[]`) ditambah `kategoriHutang` |
 | GET | `/hutang/mutasi` | `?kodePembantuId&kategori&proyekId`. Dengan `kodePembantuId`, saldo awal ikut sebagai baris terakhir (`sumber: 'saldo_awal'`) |
 | GET | `/hutang/antar-proyek` | `?proyekId` → `getMutasiAntarProyek`, kedua sisi |
+| GET | `/hutang/penjualan-unit` | `?proyekId` → `KavlingTagihan[]` penjualan aktif yang belum BAST |
 | POST | `/hutang/mutasi` | Lihat di bawah |
 | DELETE | `/hutang/mutasi/:id` | `id` = `jurnalId`. Pasangan mirror ikut terhapus. Ditolak bila sudah ada lampiran atau periode terkunci |
 
@@ -317,12 +318,21 @@ Ditolak:
 
 Field baru di respons dokumen: `jenisDokumen` (`'SPPR'`/`'ADENDUM'`), `adendum` (`{ alasan, biayaPindah, pindahKavling, kavlingLamaId }`), `berlaku`.
 
+Kategori hutang: `lahan`, `ppn`, `pihak_ketiga`, `pemegang_saham`, `karyawan`, `antar_proyek`, `bank`, dan `penjualan_unit`.
+Kontraktor punya tab sendiri (modul kontrak).
+
+**Penjualan unit.** Uang pembeli yang diterima sebelum BAST adalah hutang, bukan pendapatan: akun COA kategori
+`penjualan_unit` (212007 PEMASUKAN UANG MUKA USER, dulu 400210 pendapatan; migrasi 0011 memindahkannya di tempat).
+Kode pembantunya kategori `pembeli`, jadi `kategoriHutang` di saldo menunjukkan kategori halaman Hutang. Geraknya hanya
+dari pembayaran PR Track, BAST (saldo jadi nol, sisa harga jadi piutang), atau batal. `POST /hutang/mutasi` menolak
+kategori ini. Pembeli yang sudah BAST hilang dari saldo hutang dan tampil di `/piutang`.
+
 ## Piutang (`piutangStore`)
 
 | Method | Path | Body / query |
 | --- | --- | --- |
-| GET | `/piutang` | `?proyekId&statusBast` → `KavlingTagihan[]` |
-| GET | `/piutang/ringkasan` | `?proyekId` → `{ jumlah, totalNilaiKontrak, totalDibayar, totalSisa }` |
+| GET | `/piutang` | `?proyekId&statusBast` → `KavlingTagihan[]`. Default `statusBast=sudah_bast`; penjualan belum BAST ada di `/hutang/penjualan-unit` (`belum_bast` tetap diterima untuk kompatibilitas) |
+| GET | `/piutang/ringkasan` | `?proyekId` → `{ jumlah, totalNilaiKontrak, totalDibayar, totalSisa }`, hanya penjualan sudah BAST |
 | GET | `/piutang/:id` | |
 | POST | `/piutang/:id/bast` | `{ tanggal, nilaiHpp? }` |
 | POST | `/piutang/:id/batal` | `{ tanggal, potongan, alasan? }` (belum BAST) |

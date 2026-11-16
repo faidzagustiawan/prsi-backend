@@ -22,13 +22,17 @@ export async function piutangRoutes(fastify) {
   },async request=>ok(await tagihan.save(actorOf(request),request.params.id,request.body),'Tagihan disimpan'));
 
   fastify.get('/', {
-    preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema.optional(), statusBast: z.enum(['belum_bast', 'sudah_bast']).optional() }) })],
-    schema: { tags, description: 'Kartu tagihan per penjualan (FE: KavlingTagihan)' },
+    preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema.optional(), statusBast: z.enum(['belum_bast', 'sudah_bast']).default('sudah_bast') }) })],
+    schema: {
+      tags,
+      description: 'Kartu tagihan per penjualan (FE: KavlingTagihan). Default hanya yang sudah BAST; penjualan belum BAST ' +
+        'adalah hutang penjualan unit (GET /hutang/penjualan-unit). statusBast=belum_bast tetap diterima untuk kompatibilitas.',
+    },
   }, async (request) => ok(await piutang.list(request.query)));
 
   fastify.get('/ringkasan', {
     preHandler: [...guard, validate({ query: z.object({ proyekId: uuidSchema.optional() }) })],
-    schema: { tags, description: 'Total nilai kontrak, dibayar, sisa (FE: getTotalNilaiKontrak/Dibayar/Sisa)' },
+    schema: { tags, description: 'Total nilai kontrak, dibayar, sisa penjualan yang sudah BAST (FE: getTotalNilaiKontrak/Dibayar/Sisa)' },
   }, async (request) => ok(await piutang.ringkasan(request.query)));
 
   fastify.get('/:id', { preHandler: [...guard, validate({ params: idParams })], schema: { tags, description: 'Detail kartu tagihan' } },
