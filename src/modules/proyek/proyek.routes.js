@@ -5,7 +5,7 @@
 import { and, asc, eq } from 'drizzle-orm';
 import { db } from '../../config/database.js';
 import { trkProjects, trkUnits } from '../../shared/schemas/track.schema.js';
-import { masterPt } from '../../shared/schemas/akuntansi.schema.js';
+import { masterPtProyek } from '../../shared/schemas/akuntansi.schema.js';
 import { validate } from '../../middleware/validate.js';
 import { keuanganOnly } from '../../middleware/authorize.js';
 import { idParams } from '../../shared/utils/zod.js';
@@ -21,9 +21,9 @@ export default async function proyekRoutes(fastify) {
     schema: { tags, description: 'Daftar proyek dari cermin PR Track, beserta PT yang terikat (ptId)' },
   }, async () => {
     const rows = await db
-      .select({ id: trkProjects.id, nama: trkProjects.nama, kode: trkProjects.kode, status: trkProjects.status, ptId: masterPt.id })
+      .select({ id: trkProjects.id, nama: trkProjects.nama, kode: trkProjects.kode, status: trkProjects.status, ptId: masterPtProyek.ptId })
       .from(trkProjects)
-      .leftJoin(masterPt, eq(masterPt.proyekId, trkProjects.id))
+      .leftJoin(masterPtProyek, eq(masterPtProyek.proyekId, trkProjects.id))
       .where(eq(trkProjects.isDeleted, false))
       .orderBy(asc(trkProjects.nama));
     return { success: true, message: 'Success', data: rows };

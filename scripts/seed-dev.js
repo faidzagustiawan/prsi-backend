@@ -11,7 +11,7 @@ import { count } from 'drizzle-orm';
 import { db, closeDatabase } from '../src/config/database.js';
 import { env } from '../src/config/env.js';
 import { trkCompanies, trkProjects, trkClusters, trkUnits, trkCustomers, trkAssignments } from '../src/shared/schemas/track.schema.js';
-import { akun, kodePembantu, masterPt, akunSistem, kategoriHutangPiutang } from '../src/shared/schemas/akuntansi.schema.js';
+import { akun, kodePembantu, masterPt, masterPtProyek, akunSistem, kategoriHutangPiutang } from '../src/shared/schemas/akuntansi.schema.js';
 import { pasal, templateDokumen, templatePasal } from '../src/shared/schemas/penjualan.schema.js';
 import { trkPayments } from '../src/shared/schemas/track.schema.js';
 import { asc } from 'drizzle-orm';
@@ -152,12 +152,13 @@ try {
       track({ unitId: units[3].id, customerId: sari.id, tipePembayaran: 'cash_cicil', harga: '380000000.00', uangMuka: '0.00', status: 'active', tanggal: new Date('2026-03-10') }),
     ]);
 
-    await tx.insert(masterPt).values([
+    const [prsm, prn] = await tx.insert(masterPt).values([
       { namaPt: 'PT Pesona Raya Sejahtera Mandiri', singkatan: 'PRSM', namaDirektur: 'Budi Hartanto', ttl: 'Jakarta, 12 Maret 1975',
-        pekerjaan: 'Direktur', alamat: 'Jl. Sudirman No. 45, Jakarta Selatan', noKtp: '3174012203750002', proyekId: ath.id },
+        pekerjaan: 'Direktur', alamat: 'Jl. Sudirman No. 45, Jakarta Selatan', noKtp: '3174012203750002' },
       { namaPt: 'PT Prima Realty Nusantara', singkatan: 'PRN', namaDirektur: 'Sari Dewi Kusuma', ttl: 'Surabaya, 8 Juli 1980',
-        pekerjaan: 'Direktur', alamat: 'Jl. Pemuda No. 12, Surabaya', noKtp: '3578054807800003', proyekId: ati.id },
-    ]);
+        pekerjaan: 'Direktur', alamat: 'Jl. Pemuda No. 12, Surabaya', noKtp: '3578054807800003' },
+    ]).returning({ id: masterPt.id });
+    await tx.insert(masterPtProyek).values([{ ptId: prsm.id, proyekId: ath.id }, { ptId: prn.id, proyekId: ati.id }]);
 
     // Kategori hutang/piutang diisi migrasi 0006
     const kategoriId = new Map((await tx.select().from(kategoriHutangPiutang)).map((k) => [k.kode, k.id]));

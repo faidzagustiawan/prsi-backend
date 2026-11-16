@@ -1,7 +1,7 @@
 // src/modules/jurnal/jurnal.repository.js
 import { and, eq, inArray, sql, desc, ilike, or, gte, lt, count } from 'drizzle-orm';
 import { db } from '../../config/database.js';
-import { jurnal, jurnalDetail, lampiran, akun, kodePembantu, masterPt, periode, saldoAwalPeriode } from '../../shared/schemas/akuntansi.schema.js';
+import { jurnal, jurnalDetail, lampiran, akun, kodePembantu, masterPt, masterPtProyek, periode, saldoAwalPeriode } from '../../shared/schemas/akuntansi.schema.js';
 import { trkProjects } from '../../shared/schemas/track.schema.js';
 
 // Status yang memengaruhi saldo: jurnal asal yang sudah dibalik tetap
@@ -93,8 +93,9 @@ export async function findProyek(id, tx = db) {
 }
 
 export async function findPtByProyek(proyekId, tx = db) {
-  const [row] = await tx.select({ id: masterPt.id }).from(masterPt)
-    .where(and(eq(masterPt.proyekId, proyekId), sql`${masterPt.deletedAt} IS NULL`)).limit(1);
+  const [row] = await tx.select({ id: masterPt.id }).from(masterPtProyek)
+    .innerJoin(masterPt, eq(masterPt.id, masterPtProyek.ptId))
+    .where(and(eq(masterPtProyek.proyekId, proyekId), sql`${masterPt.deletedAt} IS NULL`)).limit(1);
   return row?.id ?? null;
 }
 

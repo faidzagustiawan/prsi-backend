@@ -1,7 +1,9 @@
 // src/modules/legal/template.routes.js
 //
 // Template dokumen per PT dan tipe transaksi (FE: templateDokumenStore).
-// pasalIds = urutan pasal yang disalin ke dokumen baru.
+// pasalIds = urutan pasal yang disalin ke dokumen baru. polaNomor boleh dikirim
+// sebagai contoh nomor ("TST/2026/KPR/01"); disimpan sebagai pola bertoken dan
+// contohNomor menunjukkan nomor yang akan terbentuk.
 import { asc, eq, inArray } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
@@ -13,6 +15,7 @@ import { idParams, uuidSchema, optionalText } from '../../shared/utils/zod.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { recordAuditTx, AuditAction } from '../../shared/utils/audit.js';
 import { TIPE_TRANSAKSI_LABEL, tipeDariLabel } from '../../shared/constants.js';
+import { normalisasiPolaNomor, isiPolaNomor } from '../../shared/utils/polaNomor.js';
 
 const tags = ['Legal - Template'];
 
@@ -22,10 +25,20 @@ const tipeSchema = z.string().transform((v, ctx) => {
   return t;
 });
 
-const toDto = (t, pasalIds) => ({
+const hariIni = () => new Date().toISOString().slice(0, 10);
+
+const toDto = (t, pasalIds, pt) => ({
   id: t.id, ptId: t.ptId, jenis: t.jenis, tipeTransaksi: TIPE_TRANSAKSI_LABEL[t.tipeTransaksi], nama: t.nama ?? undefined,
-  polaNomor: t.polaNomor, pasalIds, aktif: t.aktif, createdAt: t.createdAt,
+  polaNomor: t.polaNomor,
+  contohNomor: isiPolaNomor(t.polaNomor, { pt, tipe: t.tipeTransaksi, tanggal: hariIni(), nomor: 1 }),
+  pasalIds, aktif: t.aktif, createdAt: t.createdAt,
 });
+
+async function ptById(ids) {
+  if (!ids.length) return new Map();
+  const rows = await db.select().from(masterPt).where(inArray(masterPt.id, [...new Set(ids)]));
+  return new Map(rows.map((r) => [r.id, r]));
+}
 
 async function pasalIdsOf(ids) {
   if (!ids.length) return new Map();
@@ -38,7 +51,7 @@ async function pasalIdsOf(ids) {
 async function getOne(id) {
   const [t] = await db.select().from(templateDokumen).where(eq(templateDokumen.id, id)).limit(1);
   if (!t) throw new AppError('Template tidak ditemukan.', 404);
-  return toDto(t, (await pasalIdsOf([id])).get(id));
+  return toDto(t, (await pasalIdsOf([id])).get(id), (await ptById([t.ptId])).get(t.ptId));
 }
 
 async function setPasal(tx, templateId, pasalIds) {
@@ -55,7 +68,8 @@ const body = z.object({
   ptId: uuidSchema,
   tipeTransaksi: tipeSchema,
   nama: optionalText(100),
-  polaNomor: z.string().trim().min(1).max(60).refine((v) => v.includes('{NO}'), 'Pola nomor wajib memuat {NO}'),
+  polaNomor: z.string().trim().min(1).max(60).transform(normalisasiPolaNomor)
+    .refine((v) => v.length <= 60, 'Pola nomor maksimal 60 karakter'),
   pasalIds: z.array(uuidSchema).max(100).default([]),
   aktif: z.boolean().default(true),
 });
@@ -65,12 +79,13 @@ export default async function templateRoutes(fastify) {
 
   fastify.get('/', {
     preHandler: [...guard, validate({ query: z.object({ ptId: uuidSchema.optional() }) })],
-    schema: { tags, description: 'Daftar template; pola nomor memakai token {PT} {TAHUN} {BULAN} {TIPE} {NO}' },
+    schema: { tags, description: 'Daftar template; pola nomor memakai token {PT} {TAHUN} {BULAN} {BULAN_ROMAWI} {TIPE} {NO}; contohNomor = nomor pertama bila dipakai hari ini' },
   }, async (request) => {
     const rows = await db.select().from(templateDokumen)
       .where(request.query.ptId ? eq(templateDokumen.ptId, request.query.ptId) : undefined).orderBy(asc(templateDokumen.createdAt));
     const ids = await pasalIdsOf(rows.map((r) => r.id));
-    return { success: true, message: 'Success', data: rows.map((r) => toDto(r, ids.get(r.id))) };
+    const pts = await ptById(rows.map((r) => r.ptId));
+    return { success: true, message: 'Success', data: rows.map((r) => toDto(r, ids.get(r.id), pts.get(r.ptId))) };
   });
 
   fastify.get('/:id', { preHandler: [...guard, validate({ params: idParams })], schema: { tags, description: 'Detail template' } },

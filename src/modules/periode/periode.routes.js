@@ -2,11 +2,11 @@
 //
 // Tutup buku per PT per bulan (Alur 6). Periode terkunci tidak bisa diubah;
 // koreksi berikutnya lewat jurnal balik di periode berjalan.
-import { and, asc, count, eq, gte, lt, sql, or, isNull } from 'drizzle-orm';
+import { and, asc, count, eq, gte, lt, sql, or, isNull, inArray } from 'drizzle-orm';
 import { lockPeriode } from '../jurnal/jurnal.repository.js';
 import { z } from 'zod';
 import { db } from '../../config/database.js';
-import { periode, masterPt, jurnal } from '../../shared/schemas/akuntansi.schema.js';
+import { periode, masterPt, masterPtProyek, jurnal } from '../../shared/schemas/akuntansi.schema.js';
 import { validate } from '../../middleware/validate.js';
 import { keuanganOnly, actorOf } from '../../middleware/authorize.js';
 import { uuidSchema, bulanSchema } from '../../shared/utils/zod.js';
@@ -52,8 +52,9 @@ export default async function periodeRoutes(fastify) {
     const { y, m, start, end } = range(bulan);
 
     const row = await db.transaction(async (tx) => {
-      const [pt] = await tx.select({ id: masterPt.id, proyekId: masterPt.proyekId }).from(masterPt).where(and(eq(masterPt.id, ptId), isNull(masterPt.deletedAt))).limit(1);
+      const [pt] = await tx.select({ id: masterPt.id }).from(masterPt).where(and(eq(masterPt.id, ptId), isNull(masterPt.deletedAt))).limit(1);
       if (!pt) throw new AppError('PT tidak ditemukan.', 404);
+      const proyekIds = (await tx.select({ id: masterPtProyek.proyekId }).from(masterPtProyek).where(eq(masterPtProyek.ptId, ptId))).map((r) => r.id);
       await lockPeriode(tx, ptId, bulan);
 
       await tx.insert(periode).values({ ptId, tahun: y, bulan: m }).onConflictDoNothing();
@@ -63,7 +64,7 @@ export default async function periodeRoutes(fastify) {
 
       // Antrean yang harus nol sebelum tutup buku (Alur 6)
       const [{ n }] = await tx.select({ n: count() }).from(jurnal)
-        .where(and(or(eq(jurnal.ptId, ptId), pt.proyekId ? eq(jurnal.proyekId, pt.proyekId) : undefined), eq(jurnal.status, 'draft'), gte(jurnal.tanggal, start), lt(jurnal.tanggal, end)));
+        .where(and(or(eq(jurnal.ptId, ptId), proyekIds.length ? inArray(jurnal.proyekId, proyekIds) : undefined), eq(jurnal.status, 'draft'), gte(jurnal.tanggal, start), lt(jurnal.tanggal, end)));
       if (Number(n) > 0) throw new AppError(`Masih ada ${n} jurnal draft di periode ${bulan}.`, 422);
       const [antrean] = await tx.execute(sql`
         SELECT COUNT(*)::int n
@@ -71,8 +72,8 @@ export default async function periodeRoutes(fastify) {
         JOIN finance.status_pembayaran_si s ON s.payment_id = p.id
         JOIN finance.trk_assignments a ON a.id = p.assignment_id
         JOIN finance.trk_units u ON u.id = a.unit_id
-        JOIN finance.master_pt pt ON pt.proyek_id = u.project_id
-        WHERE pt.id = ${ptId} AND s.status_proses IN ('gagal_validasi', 'perlu_ditinjau')
+        JOIN finance.master_pt_proyek pp ON pp.proyek_id = u.project_id
+        WHERE pp.pt_id = ${ptId} AND s.status_proses IN ('gagal_validasi', 'perlu_ditinjau')
           AND p.tanggal >= ${start} AND p.tanggal < ${end}
       `);
       if (antrean.n > 0) throw new AppError(`Masih ada ${antrean.n} pembayaran PR Track Gagal validasi / Perlu ditinjau di periode ${bulan}.`, 422);

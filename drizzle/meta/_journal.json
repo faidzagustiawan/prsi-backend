@@ -71,6 +71,13 @@
       "when": 1792411200000,
       "tag": "0009_billing_sync",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1794822946770,
+      "tag": "0010_pt_multi_proyek",
+      "breakpoints": true
     }
   ]
 }

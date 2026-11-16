@@ -83,6 +83,16 @@ test('backend integration with real PostgreSQL', async (t) => {
       const updated = await call('PATCH', `/master-pt/${pts[0].id}`, { singkatan: 'PTA' });
       assert.equal(updated.alamat, 'Alamat SI');
       assert.equal(updated.noKtp, '1234567890123456');
+      assert.deepEqual(updated.perumahanIds, [projects[0]]);
+      // Satu PT banyak perumahan; perumahan milik PT lain ditolak
+      await call('PATCH', `/master-pt/${pts[0].id}`, { perumahanIds: [projects[0], projects[1]] }, 409);
+      const lepas = await call('PATCH', `/master-pt/${pts[1].id}`, { perumahanIds: [] });
+      assert.deepEqual(lepas.perumahanIds, []);
+      await call('PATCH', `/master-pt/${pts[0].id}`, { trackCompanyId: null });
+      const multi = await call('PATCH', `/master-pt/${pts[0].id}`, { perumahanIds: [projects[0], projects[1]] });
+      assert.deepEqual([...multi.perumahanIds].sort(), [projects[0], projects[1]].sort());
+      await call('PATCH', `/master-pt/${pts[0].id}`, { perumahanIds: [projects[0]], trackCompanyId: companies[0] });
+      await call('PATCH', `/master-pt/${pts[1].id}`, { perumahanIds: [projects[1]] });
       const { applyChange } = await import('../src/sync/apply.js');
       const { db } = await import('../src/config/database.js');
       const [company] = await sql`SELECT track_id FROM finance.trk_companies WHERE id = ${companies[0]}`;

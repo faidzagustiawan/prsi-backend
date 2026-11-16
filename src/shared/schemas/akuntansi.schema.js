@@ -27,11 +27,10 @@ const timestamps = () => ({
 });
 
 // Badan hukum PT untuk dokumen legal dan tutup buku. Milik SI.
-// proyekId = perumahan tempat PT ini terikat (satu PT, satu perumahan).
+// Perumahan PT ada di master_pt_proyek (satu PT, banyak perumahan).
 export const masterPt = finance.table('master_pt', {
   id: uuid('id').defaultRandom().primaryKey(),
   trackCompanyId: uuid('track_company_id').references(() => trkCompanies.id).unique(),
-  proyekId: uuid('proyek_id').references(() => trkProjects.id).unique(),
   namaPt: varchar('nama_pt', { length: 150 }).notNull(),
   singkatan: varchar('singkatan', { length: 20 }),
   namaDirektur: varchar('nama_direktur', { length: 150 }).notNull(),
@@ -42,6 +41,13 @@ export const masterPt = finance.table('master_pt', {
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
   ...timestamps(),
 });
+
+// Perumahan milik PT. Satu perumahan hanya milik satu PT (proyek_id unik).
+export const masterPtProyek = finance.table('master_pt_proyek', {
+  ptId: uuid('pt_id').references(() => masterPt.id, { onDelete: 'cascade' }).notNull(),
+  proyekId: uuid('proyek_id').references(() => trkProjects.id).notNull().unique(),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+}, (t) => [index('master_pt_proyek_pt_idx').on(t.ptId)]);
 
 // Kategori hutang/piutang (ERD: kategori_hutang_piutang). Kategori baru cukup
 // ditambah sebagai baris. `kode` adalah slug yang dipakai aturan aplikasi

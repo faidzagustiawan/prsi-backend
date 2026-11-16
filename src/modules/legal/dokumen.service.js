@@ -15,7 +15,8 @@ import { trkUnits } from '../../shared/schemas/track.schema.js';
 import { auditLogs, users } from '../../shared/schemas/finance.schema.js';
 import { AppError } from '../../shared/utils/AppError.js';
 import { toCents, centsToString, toNumber } from '../../shared/utils/money.js';
-import { nextNumber, pad } from '../../shared/utils/penomoran.js';
+import { nextNumber } from '../../shared/utils/penomoran.js';
+import { isiPolaNomor, POLA_NOMOR_DEFAULT } from '../../shared/utils/polaNomor.js';
 import { recordAuditTx, AuditAction } from '../../shared/utils/audit.js';
 import { TIPE_TRANSAKSI_LABEL, TIPE_DARI_TRACK } from '../../shared/constants.js';
 import { buatJurnal, toLampiranDto } from '../jurnal/jurnal.service.js';
@@ -124,12 +125,9 @@ const logStatus = (tx, actor, id, status) => recordAuditTx(tx, {
 });
 
 async function nomorDokumen(tx, { pt, template, tipe, tanggal }) {
-  const [tahun, bulan] = tanggal.split('-');
-  const singkatan = pt.singkatan || pt.namaPt.split(/\s+/).filter((w) => w !== 'PT').map((w) => w[0]).join('').toUpperCase().slice(0, 4);
-  const pola = template?.polaNomor ?? '{PT}/{TAHUN}/{TIPE}/{NO}';
-  const n = await nextNumber(tx, { jenis: 'dokumen', scope: `${pt.id}:${tipe}`, tahun: Number(tahun) });
-  return pola.replace('{PT}', singkatan).replace('{TAHUN}', tahun).replace('{BULAN}', bulan)
-    .replace('{TIPE}', TIPE_TRANSAKSI_LABEL[tipe].toUpperCase().replace(' ', '_')).replace('{NO}', pad(n));
+  const pola = template?.polaNomor ?? POLA_NOMOR_DEFAULT;
+  const nomor = await nextNumber(tx, { jenis: 'dokumen', scope: `${pt.id}:${tipe}`, tahun: Number(tanggal.slice(0, 4)) });
+  return isiPolaNomor(pola, { pt, tipe, tanggal, nomor });
 }
 
 async function pilihTemplate(tx, { templateId, ptId, tipe }) {
